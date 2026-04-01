@@ -1,0 +1,9 @@
+node_modules/
+.next/
+__pycache__/
+.env.local
+*.pyc
+*.pyo
+*.pyd
+*.tsbuildinfo
+.claude/
