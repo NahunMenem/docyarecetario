@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import {
@@ -71,10 +71,6 @@ const COUNTRIES = [
 
 type FotoKey = "foto_dni_frente" | "foto_dni_dorso" | "selfie_dni";
 
-type Prediction = {
-  description: string;
-  place_id: string;
-};
 
 export default function CompletarPerfilPage() {
   const router = useRouter();
@@ -83,9 +79,9 @@ export default function CompletarPerfilPage() {
   const [ready, setReady] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [addressPredictions, setAddressPredictions] = useState<Prediction[]>([]);
-  const [addressSearching, setAddressSearching] = useState(false);
   const [countryCode, setCountryCode] = useState<string>("AR");
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const [form, setForm] = useState({
     tipo: (medico?.tipo || "medico").toLowerCase(),
@@ -131,46 +127,58 @@ export default function CompletarPerfilPage() {
     setReady(true);
   }, [medico, token, router]);
 
+  // Poll for Google Maps in case the script was already loaded (e.g. navigating back to this page)
   useEffect(() => {
-    if (!googleReady || !form.direccion.trim() || form.direccion.trim().length < 3) {
-      setAddressPredictions([]);
-      setAddressSearching(false);
-      return;
-    }
+    if (googleReady) return;
+    const check = () => {
+      if ((window as Window & { google?: unknown }).google) setGoogleReady(true);
+    };
+    check();
+    const id = setInterval(check, 300);
+    return () => clearInterval(id);
+  }, [googleReady]);
 
-    const googleMaps = (window as Window & { google?: any }).google?.maps;
-    const service = googleMaps?.places ? new googleMaps.places.AutocompleteService() : null;
-    if (!service) return;
+  // Initialize the Autocomplete widget once Google is ready and input is mounted
+  useEffect(() => {
+    if (!googleReady || !addressInputRef.current || autocompleteRef.current) return;
+    const g = (window as Window & { google?: any }).google;
+    if (!g?.maps?.places?.Autocomplete) return;
 
-    const handle = window.setTimeout(() => {
-      setAddressSearching(true);
-      service.getPlacePredictions(
-        {
-          input: form.direccion.trim(),
-          types: ["address"],
-          componentRestrictions: { country: countryCode.toLowerCase() },
-        },
-        (
-          predictions: Array<{ description: string; place_id: string }> | null,
-          status: string,
-        ) => {
-          if (status === "OK" && predictions) {
-            setAddressPredictions(
-              predictions.map((item) => ({
-                description: item.description,
-                place_id: item.place_id,
-              })),
-            );
-          } else {
-            setAddressPredictions([]);
-          }
-          setAddressSearching(false);
-        },
-      );
-    }, 260);
+    const ac = new g.maps.places.Autocomplete(addressInputRef.current, {
+      types: ["address"],
+      componentRestrictions: { country: countryCode.toLowerCase() },
+      fields: ["formatted_address", "address_components"],
+    });
+    autocompleteRef.current = ac;
 
-    return () => window.clearTimeout(handle);
-  }, [form.direccion, googleReady, countryCode]);
+    ac.addListener("place_changed", () => {
+      const place = ac.getPlace();
+      const formatted: string = place.formatted_address ?? addressInputRef.current?.value ?? "";
+      setForm((prev) => ({ ...prev, direccion: formatted }));
+
+      const components: Array<{ long_name: string; types: string[] }> =
+        place.address_components ?? [];
+      const findByType = (type: string) =>
+        components.find((c) => c.types.includes(type))?.long_name ?? "";
+
+      const locality =
+        findByType("locality") ||
+        findByType("administrative_area_level_2") ||
+        findByType("sublocality");
+      const province = findByType("administrative_area_level_1");
+
+      setForm((prev) => ({
+        ...prev,
+        localidad: prev.localidad || locality,
+        provincia: prev.provincia || province,
+      }));
+    });
+  }, [googleReady, countryCode]);
+
+  // Update country restriction when user changes country selector
+  useEffect(() => {
+    autocompleteRef.current?.setComponentRestrictions({ country: countryCode.toLowerCase() });
+  }, [countryCode]);
 
   if (!medico || !token || !ready) {
     return (
@@ -219,48 +227,6 @@ export default function CompletarPerfilPage() {
 
   function isValidInternationalPhone(value: string) {
     return /^\+[1-9]\d{7,14}$/.test(value);
-  }
-
-  function pickAddress(prediction: Prediction) {
-    update("direccion", prediction.description);
-    setAddressPredictions([]);
-
-    const googleMaps = (window as Window & { google?: any }).google?.maps;
-    const geocoder = googleMaps ? new googleMaps.Geocoder() : null;
-    if (!geocoder) return;
-
-    geocoder.geocode(
-      { placeId: prediction.place_id },
-      (
-        results:
-          | Array<{
-              address_components: Array<{
-                long_name: string;
-                short_name: string;
-                types: string[];
-              }>;
-            }>
-          | null,
-        status: string,
-      ) => {
-        if (status !== "OK" || !results?.[0]) return;
-        const components = results[0].address_components;
-      const findByType = (type: string) =>
-        components.find((component) => component.types.includes(type))?.long_name ?? "";
-
-      const locality =
-        findByType("locality") ||
-        findByType("administrative_area_level_2") ||
-        findByType("sublocality");
-      const province = findByType("administrative_area_level_1");
-
-      setForm((prev) => ({
-        ...prev,
-        localidad: prev.localidad || locality,
-        provincia: prev.provincia || province,
-      }));
-      },
-    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -337,6 +303,31 @@ export default function CompletarPerfilPage() {
         strategy="afterInteractive"
         onLoad={() => setGoogleReady(true)}
       />
+      {/* Dark theme for Google Places autocomplete dropdown */}
+      <style>{`
+        .pac-container {
+          background: #0f1629;
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 10px;
+          box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+          margin-top: 4px;
+          font-family: Outfit, sans-serif;
+        }
+        .pac-item {
+          background: transparent;
+          border-top: 1px solid rgba(255,255,255,0.06);
+          color: #e2e8f0;
+          padding: 10px 14px;
+          cursor: pointer;
+          font-size: 0.88rem;
+        }
+        .pac-item:hover, .pac-item-selected {
+          background: rgba(10,230,199,0.08) !important;
+        }
+        .pac-item-query { color: #0ae6c7; font-weight: 600; }
+        .pac-matched { color: #0ae6c7; font-weight: 700; }
+        .pac-icon { display: none; }
+      `}</style>
       <div className="min-h-screen py-10 px-4" style={{ background: "var(--bg-base)" }}>
         <div style={{ maxWidth: 840, margin: "0 auto" }}>
           <div className="glass-card" style={{ padding: "2rem" }}>
@@ -524,73 +515,15 @@ export default function CompletarPerfilPage() {
               </div>
 
               <Field label="Dirección" icon={<Home size={14} />} required>
-                <div style={{ position: "relative" }}>
-                  <input
-                    className="input"
-                    value={form.direccion}
-                    onChange={(e) => update("direccion", e.target.value)}
-                    placeholder="Ej: Av. Cabildo 1234"
-                    required
-                    autoComplete="off"
-                  />
-                  {addressSearching && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        right: 14,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                      }}
-                    >
-                      <div
-                        className="spin"
-                        style={{
-                          width: 16,
-                          height: 16,
-                          border: "2px solid rgba(10,230,199,0.2)",
-                          borderTopColor: "var(--primary)",
-                          borderRadius: "50%",
-                        }}
-                      />
-                    </div>
-                  )}
-                  {addressPredictions.length > 0 && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "calc(100% + 6px)",
-                        left: 0,
-                        right: 0,
-                        zIndex: 20,
-                        background: "var(--bg-card)",
-                        border: "1px solid var(--glass-border)",
-                        borderRadius: "var(--radius-sm)",
-                        overflow: "hidden",
-                        boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
-                      }}
-                    >
-                      {addressPredictions.map((prediction) => (
-                        <button
-                          key={prediction.place_id}
-                          type="button"
-                          onClick={() => pickAddress(prediction)}
-                          style={{
-                            width: "100%",
-                            textAlign: "left",
-                            background: "transparent",
-                            border: "none",
-                            borderBottom: "1px solid var(--glass-border)",
-                            padding: "0.9rem 1rem",
-                            color: "var(--text-main)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {prediction.description}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <input
+                  ref={addressInputRef}
+                  className="input"
+                  value={form.direccion}
+                  onChange={(e) => update("direccion", e.target.value)}
+                  placeholder="Ej: Av. Cabildo 1234"
+                  required
+                  autoComplete="off"
+                />
               </Field>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
