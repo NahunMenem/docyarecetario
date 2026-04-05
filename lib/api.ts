@@ -130,18 +130,20 @@ export interface Medicamento {
   pvp_pami?: number | null;
   cobertura_pct?: number | null;
   importe_afiliado?: number | null;
+  /** Indica si el resultado matcheó por nombre comercial o principio activo */
+  match_field?: "nombre_comercial" | "principio_activo";
 }
 
 export async function buscarMedicamentos(q: string): Promise<Medicamento[]> {
   if (q.length < 2) return [];
-  const res = await fetch(`${BASE}/medicamentos?q=${encodeURIComponent(q)}&limit=8`);
+  const res = await fetch(`${BASE}/medicamentos?q=${encodeURIComponent(q)}&limit=12`);
   const data = await res.json();
   return data.resultados ?? [];
 }
 
 export async function buscarPorPrincipioActivo(nombre: string): Promise<Medicamento[]> {
   const res = await fetch(
-    `${BASE}/medicamentos/principio/${encodeURIComponent(nombre)}&limit=10`
+    `${BASE}/medicamentos/principio/${encodeURIComponent(nombre)}?limit=10`
   );
   const data = await res.json();
   return data.resultados ?? [];
