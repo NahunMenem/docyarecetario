@@ -147,11 +147,13 @@ export default function MedicamentoSearch({ onSelect }: Props) {
             top: "calc(100% + 6px)",
             left: 0, right: 0,
             zIndex: 999,
-            background: "var(--bg-card)",
-            border: "1px solid var(--glass-border)",
-            borderRadius: 10,
+            background: "var(--bg-surface)",
+            border: "1px solid rgba(10,230,199,0.14)",
+            borderRadius: 14,
             overflow: "hidden",
-            boxShadow: "0 15px 40px rgba(0,0,0,0.18)",
+            boxShadow: "0 22px 48px rgba(0,0,0,0.32), 0 0 0 1px rgba(10,230,199,0.06)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
             maxHeight: 380,
             overflowY: "auto",
           }}
@@ -163,8 +165,8 @@ export default function MedicamentoSearch({ onSelect }: Props) {
                 padding: "0.45rem 1rem",
                 fontSize: "0.72rem",
                 color: "var(--text-muted)",
-                background: "rgba(10,230,199,0.04)",
-                borderBottom: "1px solid var(--glass-border)",
+                background: "rgba(10,230,199,0.06)",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
                 display: "flex",
                 gap: "0.75rem",
                 flexWrap: "wrap",
@@ -194,10 +196,11 @@ export default function MedicamentoSearch({ onSelect }: Props) {
                 style={{
                   padding: "0.85rem 1rem",
                   cursor: "pointer",
-                  borderBottom: "1px solid var(--glass-border)",
+                  background: "transparent",
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
                   transition: "background 0.15s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(10,230,199,0.07)")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(10,230,199,0.09)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
@@ -284,13 +287,16 @@ export default function MedicamentoSearch({ onSelect }: Props) {
             top: "calc(100% + 6px)",
             left: 0, right: 0,
             zIndex: 999,
-            background: "var(--bg-card)",
-            border: "1px solid var(--glass-border)",
-            borderRadius: 10,
+            background: "var(--bg-surface)",
+            border: "1px solid rgba(10,230,199,0.14)",
+            borderRadius: 14,
             padding: "1.25rem",
             textAlign: "center",
             color: "var(--text-muted)",
             fontSize: "0.9rem",
+            boxShadow: "0 22px 48px rgba(0,0,0,0.32), 0 0 0 1px rgba(10,230,199,0.06)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
           }}
         >
           <div>No se encontraron resultados para &quot;{q}&quot;</div>
