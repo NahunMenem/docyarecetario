@@ -19,6 +19,17 @@ export async function loginMedico(email: string, password: string) {
   return data;
 }
 
+export async function loginMedicoConGoogle(idToken: string) {
+  const res = await fetch(`${BASE}/auth/google_medico`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_token: idToken }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Error al iniciar sesiÃ³n con Google");
+  return data;
+}
+
 export interface MedicoPerfil {
   id: number;
   full_name: string;
@@ -30,6 +41,8 @@ export interface MedicoPerfil {
   foto_perfil: string | null;
   tipo: string;
   firma_url: string | null;
+  numero_documento?: string | null;
+  matricula_validada?: boolean;
 }
 
 export async function obtenerPerfilMedico(medico_id: number, token: string): Promise<MedicoPerfil> {
@@ -73,9 +86,14 @@ export interface Medicamento {
   forma: string | null;
   concentracion: string | null;
   laboratorio: string | null;
+  presentacion?: string | null;
   requiere_receta: boolean;
   categoria: string | null;
   alertas: string[];
+  codigo_alfabeta?: string | null;
+  pvp_pami?: number | null;
+  cobertura_pct?: number | null;
+  importe_afiliado?: number | null;
 }
 
 export async function buscarMedicamentos(q: string): Promise<Medicamento[]> {

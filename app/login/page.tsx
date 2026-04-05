@@ -1,10 +1,35 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { loginMedico, obtenerPerfilMedico } from "@/lib/api";
-import { saveSession } from "@/lib/auth";
+import Script from "next/script";
+import { loginMedico, loginMedicoConGoogle, obtenerPerfilMedico } from "@/lib/api";
+import { MedicoSession, saveSession } from "@/lib/auth";
+
+const GOOGLE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+  "327572770521-tom99oocat1tcp9pahlejsar4iu62lhg.apps.googleusercontent.com";
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: {
+            client_id: string;
+            callback: (response: { credential?: string }) => void;
+          }) => void;
+          renderButton: (
+            parent: HTMLElement,
+            options: Record<string, string | number>,
+          ) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
 
 const features = [
   { icon: "🔐", text: "Firma digital con validez legal (Ley 25.506)" },
@@ -18,6 +43,83 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+
+  async function completarIngreso(data: {
+    medico_id: number;
+    access_token: string;
+    full_name?: string;
+    tipo?: string;
+    email?: string;
+    dni?: string;
+    matricula_validada?: boolean;
+    especialidad?: string | null;
+    matricula?: string | null;
+    firma_url?: string | null;
+    [key: string]: unknown;
+  }) {
+    let perfil;
+    try {
+      perfil = await obtenerPerfilMedico(data.medico_id, data.access_token);
+    } catch {
+      // Keep the login flow working even if the profile fetch fails.
+    }
+
+    const sessionData: MedicoSession = {
+      medico_id: data.medico_id,
+      access_token: data.access_token,
+      full_name: perfil?.full_name ?? data.full_name ?? "Profesional DocYa",
+      tipo: perfil?.tipo ?? data.tipo ?? "medico",
+      email: perfil?.email ?? data.email ?? "",
+      dni: perfil?.numero_documento ?? data.dni ?? "",
+      matricula_validada:
+        perfil?.matricula_validada ?? data.matricula_validada ?? false,
+      especialidad: perfil?.especialidad ?? data.especialidad ?? undefined,
+      matricula: perfil?.matricula ?? data.matricula ?? undefined,
+      firma_url: perfil?.firma_url ?? data.firma_url ?? undefined,
+    };
+
+    saveSession(sessionData);
+    router.push("/dashboard");
+  }
+
+  async function handleGoogleCredential(credential?: string) {
+    if (!credential) {
+      setError("Google no devolviÃ³ credenciales vÃ¡lidas.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    try {
+      const data = await loginMedicoConGoogle(credential);
+      await completarIngreso(data);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error inesperado al iniciar con Google");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!googleReady || !googleButtonRef.current || !window.google) return;
+    googleButtonRef.current.innerHTML = "";
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: ({ credential }) => {
+        void handleGoogleCredential(credential);
+      },
+    });
+    window.google.accounts.id.renderButton(googleButtonRef.current, {
+      theme: "filled_black",
+      shape: "pill",
+      size: "large",
+      text: "signin_with",
+      width: 360,
+      logo_alignment: "left",
+    });
+  }, [googleReady]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,22 +127,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await loginMedico(email.trim(), password.trim());
-
-      let sessionData = data;
-      try {
-        const perfil = await obtenerPerfilMedico(data.medico_id, data.access_token);
-        sessionData = {
-          ...data,
-          especialidad: perfil.especialidad ?? data.especialidad,
-          matricula: perfil.matricula ?? data.matricula,
-          firma_url: perfil.firma_url ?? data.firma_url,
-        };
-      } catch {
-        // Keep the login flow working even if the profile fetch fails.
-      }
-
-      saveSession(sessionData);
-      router.push("/dashboard");
+      await completarIngreso(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error inesperado");
     } finally {
@@ -49,7 +136,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ background: "var(--bg-base)" }}>
+    <>
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        strategy="afterInteractive"
+        onLoad={() => setGoogleReady(true)}
+      />
+      <div className="min-h-screen flex" style={{ background: "var(--bg-base)" }}>
       {/* Left Brand Panel */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
@@ -258,6 +351,53 @@ export default function LoginPage() {
 
             <div
               style={{
+                marginTop: "1rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.85rem",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.85rem",
+                  color: "var(--text-muted)",
+                  fontSize: "0.85rem",
+                }}
+              >
+                <div style={{ flex: 1, height: 1, background: "var(--glass-border)" }} />
+                o seguÃ­ con Google
+                <div style={{ flex: 1, height: 1, background: "var(--glass-border)" }} />
+              </div>
+              <div
+                style={{
+                  border: "1px solid var(--glass-border)",
+                  borderRadius: "999px",
+                  padding: "0.65rem",
+                  background: "rgba(255,255,255,0.04)",
+                }}
+              >
+                <div
+                  ref={googleButtonRef}
+                  style={{
+                    minHeight: 44,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {!googleReady && (
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                      Cargando acceso con Google...
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
                 borderTop: "1px solid var(--glass-border)",
                 marginTop: "2rem",
                 paddingTop: "1.5rem",
@@ -289,5 +429,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
