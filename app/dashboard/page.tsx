@@ -41,6 +41,9 @@ export default function DashboardPage() {
           especialidad: perfil.especialidad ?? m.especialidad,
           matricula: perfil.matricula ?? m.matricula,
           firma_url: perfil.firma_url ?? m.firma_url,
+          validado: perfil.validado ?? m.validado,
+          matricula_validada: perfil.matricula_validada ?? m.matricula_validada,
+          perfil_completo: perfil.perfil_completo ?? m.perfil_completo,
         };
         saveSession(nextMedico);
         setMedico(nextMedico);

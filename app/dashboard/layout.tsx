@@ -33,6 +33,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const m = getMedico();
     if (!m) { router.replace("/login"); return; }
+    if (!m.perfil_completo) { router.replace("/completar-perfil"); return; }
+    if (!m.validado || !m.matricula_validada) { router.replace("/cuenta-en-revision"); return; }
     setMedico(m);
   }, [router]);
 

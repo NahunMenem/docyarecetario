@@ -73,14 +73,25 @@ export default function LoginPage() {
       tipo: perfil?.tipo ?? data.tipo ?? "medico",
       email: perfil?.email ?? data.email ?? "",
       dni: perfil?.numero_documento ?? data.dni ?? "",
+      validado: perfil?.validado === true || data.validado === true,
       matricula_validada:
-        perfil?.matricula_validada ?? data.matricula_validada ?? false,
+        perfil?.matricula_validada === true || data.matricula_validada === true,
+      perfil_completo:
+        perfil?.perfil_completo === true || data.perfil_completo === true,
       especialidad: perfil?.especialidad ?? data.especialidad ?? undefined,
       matricula: perfil?.matricula ?? data.matricula ?? undefined,
       firma_url: perfil?.firma_url ?? data.firma_url ?? undefined,
     };
 
     saveSession(sessionData);
+    if (!sessionData.perfil_completo) {
+      router.push("/completar-perfil");
+      return;
+    }
+    if (!sessionData.validado || !sessionData.matricula_validada) {
+      router.push("/cuenta-en-revision");
+      return;
+    }
     router.push("/dashboard");
   }
 

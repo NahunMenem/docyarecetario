@@ -43,6 +43,8 @@ export interface MedicoPerfil {
   firma_url: string | null;
   numero_documento?: string | null;
   matricula_validada?: boolean;
+  perfil_completo?: boolean;
+  validado?: boolean;
 }
 
 export async function obtenerPerfilMedico(medico_id: number, token: string): Promise<MedicoPerfil> {
@@ -63,6 +65,40 @@ export async function registerMedico(payload: Record<string, unknown>) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Error al registrarse");
   return data as { medico_id?: number; id?: number; [key: string]: unknown };
+}
+
+export interface CompletarPerfilMedicoIn {
+  medico_id: number;
+  tipo: string;
+  tipo_documento: string;
+  numero_documento: string;
+  matricula: string;
+  especialidad?: string | null;
+  telefono: string;
+  direccion: string;
+  provincia?: string | null;
+  localidad?: string | null;
+  foto_dni_frente: string;
+  foto_dni_dorso: string;
+  selfie_dni: string;
+  acepta_terminos: boolean;
+}
+
+export async function completarPerfilMedico(
+  payload: CompletarPerfilMedicoIn,
+  token?: string
+) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}/auth/completar_perfil_medico`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Error al completar el perfil");
+  return data;
 }
 
 export async function subirFirmaDigital(medico_id: number, file: File) {

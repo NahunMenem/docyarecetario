@@ -4,7 +4,9 @@ export interface MedicoSession {
   tipo: string;
   email: string;
   dni: string;
+  validado: boolean;
   matricula_validada: boolean;
+  perfil_completo: boolean;
   access_token: string;
   especialidad?: string;
   matricula?: string;
