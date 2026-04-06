@@ -35,6 +35,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!m) { router.replace("/login"); return; }
     if (!m.perfil_completo) { router.replace("/completar-perfil"); return; }
     if (!m.validado || !m.matricula_validada) { router.replace("/cuenta-en-revision"); return; }
+    if (!m.firma_url) { router.replace("/firma-digital"); return; }
     setMedico(m);
   }, [router]);
 
@@ -51,7 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const initials = medico.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const initials = medico.full_name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-base)", display: "flex", flexDirection: "column" }}>
@@ -128,14 +129,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Avatar + name */}
             <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: "50%",
-                background: "linear-gradient(135deg, var(--primary), var(--secondary))",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#030b12", fontWeight: 700, fontSize: "0.75rem", flexShrink: 0,
-              }}>
-                {initials}
-              </div>
+              {medico.photo_url ? (
+                <Image
+                  src={medico.photo_url}
+                  alt={medico.full_name}
+                  width={34} height={34}
+                  style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div style={{
+                  width: 34, height: 34, borderRadius: "50%",
+                  background: "linear-gradient(135deg, var(--primary), var(--secondary))",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#030b12", fontWeight: 700, fontSize: "0.75rem", flexShrink: 0,
+                }}>
+                  {initials}
+                </div>
+              )}
               <div className="hidden sm:block">
                 <div style={{ fontWeight: 600, fontSize: "0.88rem", lineHeight: 1.2, color: "var(--text-main)" }}>{medico.full_name}</div>
                 <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>{medico.tipo}</div>

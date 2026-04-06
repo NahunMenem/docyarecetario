@@ -7,6 +7,10 @@ import Script from "next/script";
 import { loginMedico, loginMedicoConGoogle, obtenerPerfilMedico } from "@/lib/api";
 import { MedicoSession, saveSession } from "@/lib/auth";
 
+function decodeGoogleJwt(token: string): Record<string, string> | null {
+  try { return JSON.parse(atob(token.split(".")[1])); } catch { return null; }
+}
+
 const GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
   "327572770521-tom99oocat1tcp9pahlejsar4iu62lhg.apps.googleusercontent.com";
@@ -57,6 +61,7 @@ export default function LoginPage() {
     especialidad?: string | null;
     matricula?: string | null;
     firma_url?: string | null;
+    photo_url?: string | null;
     [key: string]: unknown;
   }) {
     let perfil;
@@ -81,6 +86,7 @@ export default function LoginPage() {
       especialidad: perfil?.especialidad ?? data.especialidad ?? undefined,
       matricula: perfil?.matricula ?? data.matricula ?? undefined,
       firma_url: perfil?.firma_url ?? data.firma_url ?? undefined,
+      photo_url: (perfil as { photo_url?: string } | undefined)?.photo_url ?? data.photo_url ?? undefined,
     };
 
     saveSession(sessionData);
@@ -97,15 +103,17 @@ export default function LoginPage() {
 
   async function handleGoogleCredential(credential?: string) {
     if (!credential) {
-      setError("Google no devolviÃ³ credenciales vÃ¡lidas.");
+      setError("Google no devolvió credenciales válidas.");
       return;
     }
 
     setError("");
     setLoading(true);
     try {
+      // Decodificar JWT de Google para obtener foto de perfil
+      const googlePayload = decodeGoogleJwt(credential);
       const data = await loginMedicoConGoogle(credential);
-      await completarIngreso(data);
+      await completarIngreso({ ...data, photo_url: googlePayload?.picture ?? null });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error inesperado al iniciar con Google");
     } finally {

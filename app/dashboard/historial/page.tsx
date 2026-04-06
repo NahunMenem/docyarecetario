@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Printer, QrCode, Copy, XCircle, CheckCircle2, CalendarDays,
+  Printer, QrCode, Share2, XCircle, CheckCircle2, CalendarDays,
   ClipboardList, Plus, BanIcon,
 } from "lucide-react";
 import { getToken, handleSessionExpired } from "@/lib/auth";
@@ -17,6 +17,19 @@ export default function HistorialPage() {
   const [filtro, setFiltro]       = useState<"todas" | "valida" | "anulada">("todas");
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
+
+  async function compartirReceta(url: string, paciente: string) {
+    const texto = `Receta médica de DocYa — ${paciente}\n${url}`;
+    // Web Share API (nativo en móvil)
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: "Receta DocYa", text: texto, url });
+        return;
+      } catch { /* cancelado */ return; }
+    }
+    // Fallback: abrir WhatsApp con el link
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
+  }
 
   const load = useCallback(async () => {
     const token = getToken();
@@ -175,13 +188,13 @@ export default function HistorialPage() {
                       <QrCode size={13} strokeWidth={2} /> Verificar
                     </a>
 
-                    {/* Copiar link */}
-                    <button title="Copiar link de verificación"
-                      onClick={() => { navigator.clipboard.writeText(`${base}/recetario/verificar/${r.uuid}`); showToast("Link copiado"); }}
-                      style={{ background:"var(--bg-card)", border:"1px solid var(--glass-border)", color:"var(--text-muted)", borderRadius:8, padding:"0.45rem 0.7rem", cursor:"pointer", fontSize:"0.82rem", fontWeight:600, transition:"all 0.2s", display:"inline-flex", alignItems:"center" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.borderColor="var(--primary)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.borderColor="var(--glass-border)")}>
-                      <Copy size={13} strokeWidth={2} />
+                    {/* Compartir */}
+                    <button title="Compartir receta"
+                      onClick={() => compartirReceta(`${base}/recetario/verificar/${r.uuid}`, r.paciente)}
+                      style={{ background:"rgba(124,58,237,0.08)", border:"1px solid rgba(124,58,237,0.2)", color:"#a78bfa", borderRadius:8, padding:"0.45rem 0.9rem", cursor:"pointer", fontSize:"0.82rem", fontWeight:600, transition:"all 0.2s", display:"inline-flex", alignItems:"center", gap:"0.3rem" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background="rgba(124,58,237,0.15)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background="rgba(124,58,237,0.08)")}>
+                      <Share2 size={13} strokeWidth={2} /> Compartir
                     </button>
 
                     {/* Anular */}

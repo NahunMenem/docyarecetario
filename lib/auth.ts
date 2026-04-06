@@ -11,6 +11,7 @@ export interface MedicoSession {
   especialidad?: string;
   matricula?: string;
   firma_url?: string;
+  photo_url?: string;
 }
 
 export const getToken = (): string | null =>
