@@ -28,7 +28,6 @@ import { clearSession, getMedico, getToken, saveSession, type MedicoSession } fr
 const GOOGLE_PLACES_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ||
   "AIzaSyAcvJIlpOAkRzVaXlcnE8lJQfQGBqx-bKA";
-
 const TIPOS = ["medico", "enfermero"] as const;
 const TIPOS_DOCUMENTO = ["dni", "pasaporte", "otro"] as const;
 
@@ -266,6 +265,8 @@ export default function CompletarPerfilPage() {
   const token = useMemo(() => getToken(), []);
   const [ready, setReady] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
+  const [autocompleteReady, setAutocompleteReady] = useState(false);
+  const [googleError, setGoogleError] = useState("");
   const [showTerms, setShowTerms] = useState(false);
   const [countryCode, setCountryCode] = useState<string>("AR");
   const addressInputRef = useRef<HTMLInputElement>(null);
@@ -331,7 +332,10 @@ export default function CompletarPerfilPage() {
   useEffect(() => {
     if (!googleReady || !addressInputRef.current || autocompleteRef.current) return;
     const g = (window as Window & { google?: any }).google;
-    if (!g?.maps?.places?.Autocomplete) return;
+    if (!g?.maps?.places?.Autocomplete) {
+      setGoogleError("Google Places no terminó de inicializar.");
+      return;
+    }
 
     const ac = new g.maps.places.Autocomplete(addressInputRef.current, {
       types: ["address"],
@@ -339,6 +343,8 @@ export default function CompletarPerfilPage() {
       fields: ["formatted_address", "address_components"],
     });
     autocompleteRef.current = ac;
+    setAutocompleteReady(true);
+    setGoogleError("");
 
     ac.addListener("place_changed", () => {
       const place = ac.getPlace();
@@ -495,9 +501,15 @@ export default function CompletarPerfilPage() {
   return (
     <>
       <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_PLACES_API_KEY}&libraries=places`}
+        src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_PLACES_API_KEY}&libraries=places&loading=async&language=es&region=AR`}
         strategy="afterInteractive"
-        onLoad={() => setGoogleReady(true)}
+        onLoad={() => {
+          setGoogleReady(true);
+          setGoogleError("");
+        }}
+        onError={() => {
+          setGoogleError("No se pudo cargar Google Maps Places.");
+        }}
       />
       {/* Dark theme for Google Places autocomplete dropdown */}
       <style>{`
@@ -508,6 +520,7 @@ export default function CompletarPerfilPage() {
           box-shadow: 0 18px 40px rgba(0,0,0,0.45);
           margin-top: 4px;
           font-family: Outfit, sans-serif;
+          z-index: 2147483647 !important;
         }
         .pac-item {
           background: transparent;
@@ -694,6 +707,30 @@ export default function CompletarPerfilPage() {
                   required
                   autoComplete="off"
                 />
+                {googleError && (
+                  <div
+                    style={{
+                      marginTop: "0.55rem",
+                      color: "#fca5a5",
+                      fontSize: "0.82rem",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {googleError}
+                  </div>
+                )}
+                {!googleError && googleReady && !autocompleteReady && (
+                  <div
+                    style={{
+                      marginTop: "0.55rem",
+                      color: "#fbbf24",
+                      fontSize: "0.82rem",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    Cargando autocompletado de Google Maps...
+                  </div>
+                )}
                 <div
                   style={{
                     marginTop: "0.55rem",
