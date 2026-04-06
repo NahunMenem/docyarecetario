@@ -27,7 +27,7 @@ import { clearSession, getMedico, getToken, saveSession, type MedicoSession } fr
 
 const GOOGLE_PLACES_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ||
-  "AIzaSyDVv_barlVwHJTgLF66dP4ESUffCBuS3uA";
+  "AIzaSyAcvJIlpOAkRzVaXlcnE8lJQfQGBqx-bKA";
 
 const TIPOS = ["medico", "enfermero"] as const;
 const TIPOS_DOCUMENTO = ["dni", "pasaporte", "otro"] as const;
