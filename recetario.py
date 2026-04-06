@@ -877,7 +877,7 @@ def receta_html(
                r.obra_social, r.plan, r.nro_credencial, r.creado_en,
                p.nombre, p.apellido, p.tipo_documento, p.nro_documento,
                p.sexo, p.fecha_nacimiento, p.cuil,
-               m.full_name, m.matricula, m.especialidad, m.tipo, m.firma_url
+               m.full_name, m.matricula, m.especialidad, m.tipo, m.firma_url, m.direccion
         FROM recetario_recetas r
         JOIN recetario_pacientes p ON p.id = r.paciente_id
         JOIN medicos             m ON m.id = r.medico_id
@@ -891,7 +891,7 @@ def receta_html(
      obra_social, plan, nro_credencial, creado_en,
      pac_nombre, pac_apellido, tipo_doc, nro_doc,
      sexo, fecha_nac, cuil,
-     med_nombre, matricula, especialidad, tipo_med, firma_url) = row
+     med_nombre, matricula, especialidad, tipo_med, firma_url, direccion_medico) = row
 
     fecha_emision  = creado_en.strftime("%d/%m/%Y") if creado_en else "—"
     fecha_nac_str  = fecha_nac.strftime("%d/%m/%Y") if fecha_nac else "—"
@@ -901,18 +901,31 @@ def receta_html(
     meds_rp_html  = ""
     meds_com_html = ""
     for i, m in enumerate(medicamentos or [], 1):
-        nombre        = m.get("nombre", "")
-        concentracion = m.get("concentracion") or ""
-        presentacion  = m.get("presentacion") or ""
+        nombre        = (m.get("ifa") or m.get("principio_activo_str") or m.get("nombre") or "").upper()
+        concentracion = (m.get("concentracion") or "").upper()
+        presentacion  = (m.get("presentacion") or "").upper()
+        nombre_comercial = (m.get("nombre_comercial") or "").upper()
+        forma         = (m.get("forma_farmaceutica") or m.get("forma") or "").upper()
         cantidad      = m.get("cantidad", 1)
         indicaciones  = m.get("indicaciones", "")
         cantidad_txt  = {1:"uno",2:"dos",3:"tres",4:"cuatro",5:"cinco"}.get(int(cantidad), str(cantidad))
         indicaciones_html = indicaciones if indicaciones else '<em style="color:#aaa">Sin indicaciones</em>'
+        detalle_parts = [" ".join(part for part in [forma, concentracion] if part).strip(), presentacion]
+        detalle = " — ".join(part for part in detalle_parts if part)
+        marca_html = (
+            f'<span class="med-brand">Marca sugerida: {nombre_comercial}</span><br>'
+            if nombre_comercial and nombre_comercial != nombre else ""
+        )
+        detalle_html = (
+            f'<span class="med-det">{detalle}</span><br>'
+            if detalle else ""
+        )
         meds_rp_html += (
             f'<div class="med-rp">'
             f'<span class="med-num">{i})</span>&nbsp;'
-            f'<strong>{nombre}{(" " + concentracion) if concentracion else ""}</strong>'
-            f'{(" — " + presentacion) if presentacion else ""}<br>'
+            f'<strong>{nombre}</strong><br>'
+            f'{marca_html}'
+            f'{detalle_html}'
             f'<span class="med-cant">Cant: {cantidad} ({cantidad_txt})</span>'
             f'</div>'
         )
@@ -941,6 +954,7 @@ def receta_html(
     logo_src  = "https://res.cloudinary.com/dqsacd9ez/image/upload/v1757197807/logo_1_svfdye.png"
     esp_label = "MÉDICO"
     mat_label = matricula or "—"
+    direccion_label = direccion_medico or "—"
     anulada_pill = "<span class='anulada-pill'>⚠ ANULADA</span>" if estado == "anulada" else ""
 
     # ── Bloques HTML reutilizables ────────────────────────────────────────────
@@ -961,6 +975,7 @@ def receta_html(
           <strong>{med_nombre}</strong><br>
           {esp_label}<br>
           MN {mat_label}<br>
+          <span class="top-address">{direccion_label}</span><br>
           <span class="fecha-teal">{fecha_emision}</span>
         </div>
       </div>"""
@@ -1251,6 +1266,7 @@ body {{
   text-transform: uppercase;
 }}
 .top-info {{ text-align: right; font-size: 9px; line-height: 1.6; color: #374151; flex-shrink: 0; }}
+.top-address {{ display: inline-block; max-width: 108px; color: #6b7280; line-height: 1.3; }}
 .fecha-teal {{ color: #0d9488; font-weight: 700; }}
 
 /* ── Patient grid ────────────────────────────────────────────────────────── */

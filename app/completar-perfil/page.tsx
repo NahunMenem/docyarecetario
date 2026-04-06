@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import {
@@ -12,45 +12,22 @@ import {
   Home,
   IdCard,
   MapPin,
+  PenLine,
   Phone,
   ScanFace,
   ShieldCheck,
+  Upload,
   Stethoscope,
   X,
+  Check,
+  Eraser,
 } from "lucide-react";
-import { completarPerfilMedico } from "@/lib/api";
+import { completarPerfilMedico, subirFirmaDigital } from "@/lib/api";
 import { clearSession, getMedico, getToken, saveSession, type MedicoSession } from "@/lib/auth";
 
 const GOOGLE_PLACES_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ||
   "AIzaSyDVv_barlVwHJTgLF66dP4ESUffCBuS3uA";
-
-const PROVINCIAS = [
-  "Buenos Aires",
-  "Ciudad Autónoma de Buenos Aires",
-  "Catamarca",
-  "Chaco",
-  "Chubut",
-  "Córdoba",
-  "Corrientes",
-  "Entre Ríos",
-  "Formosa",
-  "Jujuy",
-  "La Pampa",
-  "La Rioja",
-  "Mendoza",
-  "Misiones",
-  "Neuquén",
-  "Río Negro",
-  "Salta",
-  "San Juan",
-  "San Luis",
-  "Santa Cruz",
-  "Santa Fe",
-  "Santiago del Estero",
-  "Tierra del Fuego",
-  "Tucumán",
-] as const;
 
 const TIPOS = ["medico", "enfermero"] as const;
 const TIPOS_DOCUMENTO = ["dni", "pasaporte", "otro"] as const;
@@ -70,6 +47,217 @@ const COUNTRIES = [
 ] as const;
 
 type FotoKey = "foto_dni_frente" | "foto_dni_dorso" | "selfie_dni";
+
+function SignaturePad({ onSigned }: { onSigned: (file: File | null) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawing = useRef(false);
+  const lastPos = useRef({ x: 0, y: 0 });
+  const [isEmpty, setIsEmpty] = useState(true);
+
+  const initCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const width = canvas.offsetWidth;
+    const height = canvas.offsetHeight;
+    if (!width || !height) return;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(16, height - 32);
+    ctx.lineTo(width - 16, height - 32);
+    ctx.stroke();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(initCanvas, 30);
+    const canvas = canvasRef.current;
+    if (!canvas) return () => clearTimeout(timer);
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (!isDrawing.current) return;
+      const ctx = getCtx();
+      if (!ctx) return;
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      drawLine(ctx, lastPos.current.x, lastPos.current.y, x, y);
+      lastPos.current = { x, y };
+    };
+
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      clearTimeout(timer);
+      canvas.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [initCanvas]);
+
+  function getCtx() {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) return null;
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 2.8;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    return ctx;
+  }
+
+  function drawLine(
+    ctx: CanvasRenderingContext2D,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+  ) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  function onMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    isDrawing.current = true;
+    const rect = canvasRef.current!.getBoundingClientRect();
+    lastPos.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function onMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (!isDrawing.current) return;
+    const ctx = getCtx();
+    if (!ctx) return;
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    drawLine(ctx, lastPos.current.x, lastPos.current.y, x, y);
+    lastPos.current = { x, y };
+    if (isEmpty) setIsEmpty(false);
+  }
+
+  function onMouseUp() {
+    if (!isDrawing.current) return;
+    isDrawing.current = false;
+    exportSignature();
+  }
+
+  function onTouchStart(e: React.TouchEvent<HTMLCanvasElement>) {
+    isDrawing.current = true;
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const touch = e.touches[0];
+    lastPos.current = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  }
+
+  function onTouchEnd() {
+    isDrawing.current = false;
+    setIsEmpty(false);
+    exportSignature();
+  }
+
+  function clear() {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(16, canvas.offsetHeight - 32);
+    ctx.lineTo(canvas.offsetWidth - 16, canvas.offsetHeight - 32);
+    ctx.stroke();
+    setIsEmpty(true);
+    onSigned(null);
+  }
+
+  function exportSignature() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      onSigned(new File([blob], "firma.png", { type: "image/png" }));
+    }, "image/png");
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
+      <div
+        style={{
+          position: "relative",
+          borderRadius: "var(--radius-sm)",
+          overflow: "hidden",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          background: "#fff",
+        }}
+      >
+        {isEmpty && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.5rem",
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+          >
+            <PenLine size={28} color="#cbd5e1" strokeWidth={1.4} />
+            <span style={{ color: "#94a3b8", fontSize: "0.9rem", fontWeight: 500 }}>
+              Firmá acá con tu dedo o mouse
+            </span>
+          </div>
+        )}
+        <canvas
+          ref={canvasRef}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          style={{ width: "100%", height: 220, display: "block", touchAction: "none" }}
+        />
+      </div>
+
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          className="btn-outline"
+          onClick={clear}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <Eraser size={16} />
+          Limpiar
+        </button>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.45rem",
+            color: isEmpty ? "var(--text-muted)" : "#34d399",
+            fontSize: "0.92rem",
+            fontWeight: 600,
+          }}
+        >
+          {isEmpty ? <Upload size={16} /> : <Check size={16} />}
+          {isEmpty ? "Firma pendiente" : "Firma lista para subir"}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 
 export default function CompletarPerfilPage() {
@@ -105,6 +293,7 @@ export default function CompletarPerfilPage() {
     foto_dni_dorso: "",
     selfie_dni: "",
   });
+  const [firmaFile, setFirmaFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -249,6 +438,11 @@ export default function CompletarPerfilPage() {
       return;
     }
 
+    if (!firmaFile) {
+      setError("FirmÃ¡ digitalmente para completar tu perfil.");
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await completarPerfilMedico(
@@ -270,6 +464,7 @@ export default function CompletarPerfilPage() {
         },
         tokenValue,
       );
+      const firmaResult = await subirFirmaDigital(medicoSession.medico_id, firmaFile);
 
       const nextSession: MedicoSession = {
         ...medicoSession,
@@ -281,6 +476,7 @@ export default function CompletarPerfilPage() {
         perfil_completo: data.medico?.perfil_completo ?? true,
         especialidad: form.especialidad.trim() || medicoSession.especialidad,
         matricula: form.matricula.trim(),
+        firma_url: firmaResult?.firma_url ?? medicoSession.firma_url,
       };
       saveSession(nextSession);
       router.replace("/cuenta-en-revision");
@@ -488,32 +684,6 @@ export default function CompletarPerfilPage() {
                 </Field>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Provincia" icon={<MapPin size={14} />}>
-                  <select
-                    className="input"
-                    value={form.provincia}
-                    onChange={(e) => update("provincia", e.target.value)}
-                  >
-                    <option value="">Seleccioná...</option>
-                    {PROVINCIAS.map((provincia) => (
-                      <option key={provincia} value={provincia}>
-                        {provincia}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-
-                <Field label="Localidad" icon={<MapPin size={14} />}>
-                  <input
-                    className="input"
-                    value={form.localidad}
-                    onChange={(e) => update("localidad", e.target.value)}
-                    placeholder="Ej: CABA"
-                  />
-                </Field>
-              </div>
-
               <Field label="Dirección" icon={<Home size={14} />} required>
                 <input
                   ref={addressInputRef}
@@ -524,6 +694,17 @@ export default function CompletarPerfilPage() {
                   required
                   autoComplete="off"
                 />
+                <div
+                  style={{
+                    marginTop: "0.55rem",
+                    color: "var(--text-muted)",
+                    fontSize: "0.82rem",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  La dirección se autocompleta con Google Maps y, cuando haya datos disponibles,
+                  completa automáticamente provincia y localidad para el perfil.
+                </div>
               </Field>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -542,6 +723,42 @@ export default function CompletarPerfilPage() {
                   fileName={fotoNombres.selfie_dni}
                   onChange={(file) => handleFoto("selfie_dni", file)}
                 />
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.95rem",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid var(--glass-border)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "1rem",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 14,
+                      display: "grid",
+                      placeItems: "center",
+                      background: "rgba(10,230,199,0.12)",
+                      color: "var(--primary)",
+                    }}
+                  >
+                    <PenLine size={18} />
+                  </div>
+                  <div>
+                    <div style={{ color: "var(--text-main)", fontWeight: 700 }}>Firma digital</div>
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                      FirmÃ¡ igual que en DocYa Pro para validar recetas, certificados y documentos.
+                    </div>
+                  </div>
+                </div>
+
+                <SignaturePad onSigned={setFirmaFile} />
               </div>
 
               <div
