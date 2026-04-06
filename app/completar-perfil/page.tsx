@@ -271,6 +271,7 @@ export default function CompletarPerfilPage() {
   const [countryCode, setCountryCode] = useState<string>("AR");
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const autocompleteInitAttempts = useRef(0);
 
   const [form, setForm] = useState({
     tipo: (medico?.tipo || "medico").toLowerCase(),
@@ -331,43 +332,68 @@ export default function CompletarPerfilPage() {
   // Initialize the Autocomplete widget once Google is ready and input is mounted
   useEffect(() => {
     if (!googleReady || !addressInputRef.current || autocompleteRef.current) return;
-    const g = (window as Window & { google?: any }).google;
-    if (!g?.maps?.places?.Autocomplete) {
-      setGoogleError("Google Places no terminó de inicializar.");
-      return;
-    }
 
-    const ac = new g.maps.places.Autocomplete(addressInputRef.current, {
-      types: ["address"],
-      componentRestrictions: { country: countryCode.toLowerCase() },
-      fields: ["formatted_address", "address_components"],
-    });
-    autocompleteRef.current = ac;
-    setAutocompleteReady(true);
-    setGoogleError("");
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    ac.addListener("place_changed", () => {
-      const place = ac.getPlace();
-      const formatted: string = place.formatted_address ?? addressInputRef.current?.value ?? "";
-      setForm((prev) => ({ ...prev, direccion: formatted }));
+    const initAutocomplete = () => {
+      if (cancelled || autocompleteRef.current || !addressInputRef.current) return;
 
-      const components: Array<{ long_name: string; types: string[] }> =
-        place.address_components ?? [];
-      const findByType = (type: string) =>
-        components.find((c) => c.types.includes(type))?.long_name ?? "";
+      const g = (window as Window & { google?: any }).google;
+      const AutocompleteCtor = g?.maps?.places?.Autocomplete;
 
-      const locality =
-        findByType("locality") ||
-        findByType("administrative_area_level_2") ||
-        findByType("sublocality");
-      const province = findByType("administrative_area_level_1");
+      if (!AutocompleteCtor) {
+        autocompleteInitAttempts.current += 1;
+        if (autocompleteInitAttempts.current >= 30) {
+          setGoogleError("Google Places no terminó de inicializar.");
+          return;
+        }
+        retryTimer = setTimeout(initAutocomplete, 300);
+        return;
+      }
 
-      setForm((prev) => ({
-        ...prev,
-        localidad: prev.localidad || locality,
-        provincia: prev.provincia || province,
-      }));
-    });
+      const ac = new AutocompleteCtor(addressInputRef.current, {
+        types: ["address"],
+        componentRestrictions: { country: countryCode.toLowerCase() },
+        fields: ["formatted_address", "address_components"],
+      });
+
+      autocompleteRef.current = ac;
+      autocompleteInitAttempts.current = 0;
+      setAutocompleteReady(true);
+      setGoogleError("");
+
+      ac.addListener("place_changed", () => {
+        const place = ac.getPlace();
+        const formatted: string =
+          place.formatted_address ?? addressInputRef.current?.value ?? "";
+        setForm((prev) => ({ ...prev, direccion: formatted }));
+
+        const components: Array<{ long_name: string; types: string[] }> =
+          place.address_components ?? [];
+        const findByType = (type: string) =>
+          components.find((c) => c.types.includes(type))?.long_name ?? "";
+
+        const locality =
+          findByType("locality") ||
+          findByType("administrative_area_level_2") ||
+          findByType("sublocality");
+        const province = findByType("administrative_area_level_1");
+
+        setForm((prev) => ({
+          ...prev,
+          localidad: prev.localidad || locality,
+          provincia: prev.provincia || province,
+        }));
+      });
+    };
+
+    initAutocomplete();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [googleReady, countryCode]);
 
   // Update country restriction when user changes country selector
