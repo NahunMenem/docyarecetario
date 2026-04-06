@@ -113,6 +113,26 @@ class AnularIn(BaseModel):
     motivo: Optional[str] = None
 
 
+def _detalle_medicamento(forma: str, concentracion: str, presentacion: str) -> str:
+    forma_concentracion = " ".join(part for part in [forma, concentracion] if part).strip()
+    if not presentacion:
+        return forma_concentracion
+    if not forma_concentracion:
+        return presentacion
+
+    presentacion_norm = " ".join(presentacion.lower().split())
+    forma_norm = " ".join(forma_concentracion.lower().split())
+
+    if presentacion_norm == forma_norm:
+        return presentacion
+    if presentacion_norm.startswith(forma_norm):
+        return presentacion
+    if forma_norm.startswith(presentacion_norm):
+        return forma_concentracion
+
+    return f"{forma_concentracion} — {presentacion}"
+
+
 # ====================================================
 # 👤 PACIENTES
 # ====================================================
@@ -910,8 +930,7 @@ def receta_html(
         indicaciones  = m.get("indicaciones", "")
         cantidad_txt  = {1:"uno",2:"dos",3:"tres",4:"cuatro",5:"cinco"}.get(int(cantidad), str(cantidad))
         indicaciones_html = indicaciones if indicaciones else '<em style="color:#aaa">Sin indicaciones</em>'
-        detalle_parts = [" ".join(part for part in [forma, concentracion] if part).strip(), presentacion]
-        detalle = " — ".join(part for part in detalle_parts if part)
+        detalle = _detalle_medicamento(forma, concentracion, presentacion)
         marca_html = (
             f'<span class="med-brand">Marca sugerida: {nombre_comercial}</span><br>'
             if nombre_comercial and nombre_comercial != nombre else ""
