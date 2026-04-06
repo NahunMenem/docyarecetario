@@ -248,7 +248,10 @@ export async function eliminarPaciente(
 // ── Recetario — Recetas ───────────────────────────────────────────────────────
 
 export interface MedicamentoItem {
-  nombre: string;
+  nombre?: string;
+  ifa?: string;
+  nombre_comercial?: string;
+  forma_farmaceutica?: string;
   concentracion?: string;
   presentacion?: string;
   cantidad: number;

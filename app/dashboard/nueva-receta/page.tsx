@@ -16,6 +16,20 @@ interface LineaReceta {
   indicaciones: string;
 }
 
+function getIfaMedicamento(m: Medicamento) {
+  return (m.principio_activo_str || m.nombre_comercial || "").trim();
+}
+
+function getNombreComercialSugerido(m: Medicamento) {
+  const nombre = (m.nombre_comercial || "").trim();
+  const ifa = getIfaMedicamento(m).toLowerCase();
+  return nombre && nombre.toLowerCase() !== ifa ? nombre : "";
+}
+
+function getFormaConcentracion(forma?: string | null, concentracion?: string | null) {
+  return [forma, concentracion].filter(Boolean).join(" ").trim();
+}
+
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const inp: React.CSSProperties = {
   width: "100%", background: "var(--input-bg)", border: "1px solid var(--glass-border)",
@@ -133,10 +147,17 @@ async function generarPDF(
     doc.text(String(i+1), M+6, y+9, { align: "center" });
     const tx = M+14;
     doc.setTextColor(...dark); doc.setFontSize(10); doc.setFont("helvetica","bold");
-    const nom = `${l.medicamento.nombre_comercial}${l.concentracion ? " "+l.concentracion : ""}`;
-    doc.text(nom, tx, y+7);
+    const ifa = getIfaMedicamento(l.medicamento);
+    const nombreComercial = getNombreComercialSugerido(l.medicamento);
+    const formaConcentracion = getFormaConcentracion(l.medicamento.forma, l.concentracion);
+    doc.text(ifa || l.medicamento.nombre_comercial, tx, y+7);
     doc.setTextColor(...gris); doc.setFontSize(7.5); doc.setFont("helvetica","normal");
-    const sub = [l.medicamento.principio_activo_str, l.medicamento.forma].filter(Boolean).join(" · ");
+    const sub = [
+      nombreComercial ? `Marca sugerida: ${nombreComercial}` : "",
+      formaConcentracion,
+      l.presentacion || "",
+      l.medicamento.laboratorio || "",
+    ].filter(Boolean).join(" · ");
     if (sub) doc.text(sub, tx, y+12);
     if (l.medicamento.alertas?.length) { doc.setTextColor(180,83,9); doc.setFontSize(7); doc.text(`⚠ ${l.medicamento.alertas[0]}`, PW-M-2, y+7, { align:"right" }); }
     doc.setTextColor(...dark); doc.setFontSize(8);
@@ -194,7 +215,7 @@ export default function NuevaRecetaPage() {
   const pacienteSeleccionado = pacientes.find((p) => p.id === pacienteId) ?? null;
 
   function agregarMedicamento(m: Medicamento) {
-    setLineas((prev) => [...prev, { medicamento: m, concentracion: m.concentracion ?? "", presentacion: "", cantidad: 1, indicaciones: "" }]);
+    setLineas((prev) => [...prev, { medicamento: m, concentracion: m.concentracion ?? "", presentacion: m.presentacion ?? "", cantidad: 1, indicaciones: "" }]);
   }
   function updateLinea(idx: number, k: keyof Omit<LineaReceta, "medicamento">, v: string | number) {
     setLineas((prev) => prev.map((l, i) => i === idx ? { ...l, [k]: v } : l));
@@ -210,7 +231,10 @@ export default function NuevaRecetaPage() {
     setEmitiendo(true); setError("");
     try {
       const meds: MedicamentoItem[] = lineas.map((l) => ({
-        nombre: l.medicamento.nombre_comercial,
+        nombre: getIfaMedicamento(l.medicamento) || l.medicamento.nombre_comercial,
+        ifa: getIfaMedicamento(l.medicamento) || undefined,
+        nombre_comercial: getNombreComercialSugerido(l.medicamento) || undefined,
+        forma_farmaceutica: l.medicamento.forma || undefined,
         concentracion: l.concentracion || undefined,
         presentacion: l.presentacion || undefined,
         cantidad: l.cantidad,
@@ -377,11 +401,19 @@ export default function NuevaRecetaPage() {
                   <div style={{ width:30,height:30,background:"linear-gradient(135deg,var(--primary),var(--secondary))",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",color:"#030b12",fontWeight:700,fontSize:"0.85rem",flexShrink:0 }}>{i+1}</div>
                   <div style={{ minWidth:0 }}>
                     <p style={{ fontWeight:700, fontSize:"1rem", lineHeight:1.3 }}>
-                      {l.medicamento.nombre_comercial}
-                      {l.medicamento.concentracion && <span style={{ color:"var(--primary)", marginLeft:"0.4rem" }}>{l.medicamento.concentracion}</span>}
+                      {getIfaMedicamento(l.medicamento) || l.medicamento.nombre_comercial}
                     </p>
+                    {getNombreComercialSugerido(l.medicamento) && (
+                      <p style={{ color:"var(--primary)", fontSize:"0.82rem", marginTop:3, fontWeight:600 }}>
+                        Marca sugerida: {getNombreComercialSugerido(l.medicamento)}
+                      </p>
+                    )}
                     <p style={{ color:"var(--text-muted)", fontSize:"0.8rem", marginTop:2 }}>
-                      {[l.medicamento.principio_activo_str, l.medicamento.forma, l.medicamento.laboratorio].filter(Boolean).join(" · ")}
+                      {[
+                        getFormaConcentracion(l.medicamento.forma, l.concentracion),
+                        l.presentacion,
+                        l.medicamento.laboratorio
+                      ].filter(Boolean).join(" · ")}
                     </p>
                     {l.medicamento.alertas?.length > 0 && <p style={{ color:"#fbbf24", fontSize:"0.78rem", marginTop:4 }}>⚠ {l.medicamento.alertas.join(", ")}</p>}
                   </div>
