@@ -201,6 +201,7 @@ def _render_certificado_body(
     paciente_nombre: str,
     paciente_documento: str,
     edad: Optional[int],
+    sexo_label: str,
     diagnostico: Optional[str],
     reposo_dias: Optional[int],
     fecha_emision: str,
@@ -208,115 +209,71 @@ def _render_certificado_body(
     paciente = escape(paciente_nombre)
     documento = escape(paciente_documento)
     edad_txt = str(edad) if edad is not None else "—"
+    sexo_txt = escape(sexo_label or "—")
     diagnostico_html = escape(diagnostico or "Sin diagnóstico especificado")
 
     if tipo_certificado == "ausentismo_laboral":
         return f"""
-  <div class="body-grid">
-    <div class="body-copy">
-      <div class="body-kicker">Certifico</div>
-      <h2>Ausentismo laboral</h2>
-      <p>Certifico que <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, consta en mi poder{f" la historia clínica N° <strong>{escape(_valor_campo(campos, 'historia_clinica'))}</strong>" if _valor_campo(campos, 'historia_clinica', '') else ""}.</p>
-      <p>Diagnóstico o descripción sindrómica: <strong>{diagnostico_html}</strong>.</p>
-      <p>Por lo expuesto, se indica <strong>{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</strong> día(s) de <strong>{escape(_valor_campo(campos, 'tipo_indicacion', 'ausencia laboral justificada'))}</strong>, con fecha de inicio el <strong>{escape(_valor_campo(campos, 'fecha_inicio'))}</strong> y alta estimada el <strong>{escape(_valor_campo(campos, 'fecha_fin'))}</strong>.</p>
-      <p>El presente se extiende para ser presentado ante <strong>{escape(_valor_campo(campos, 'presentar_ante'))}</strong>.</p>
+  <div class="doc-body">
+    <div class="doc-title-row">
+      <span class="doc-title-line"></span>
+      <div class="doc-title-text">CERTIFICADO MÉDICO — AUSENTISMO LABORAL</div>
+      <span class="doc-title-line"></span>
     </div>
-    <div class="body-side">
-      <div class="side-card">
-        <span class="side-label">Indicación médica</span>
-        <strong>{escape(_valor_campo(campos, 'tipo_indicacion', 'Ausencia laboral justificada'))}</strong>
-      </div>
-      <div class="side-card">
-        <span class="side-label">Período</span>
-        <strong>{escape(_valor_campo(campos, 'fecha_inicio'))}</strong>
-        <small>hasta {escape(_valor_campo(campos, 'fecha_fin'))}</small>
-      </div>
-      <div class="side-card">
-        <span class="side-label">Días</span>
-        <strong>{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</strong>
-      </div>
-    </div>
+    <p class="doc-copy"><strong>CERTIFICO</strong> que el/la Sr./Sra. <span class="doc-fill">{paciente}</span>, de <span class="doc-fill doc-fill-short">{edad_txt}</span> años de edad, sexo <span class="doc-fill doc-fill-short">{sexo_txt}</span>, DNI Nro. <span class="doc-fill">{documento}</span>.</p>
+    <div class="doc-section-title">DIAGNÓSTICO</div>
+    <div class="doc-label">DIAGNÓSTICO / DESCRIPCIÓN SINDRÓMICA (CIE-10)</div>
+    <div class="doc-box">{diagnostico_html}</div>
+    <div class="doc-section-title">INDICACIÓN MÉDICA</div>
+    <p class="doc-copy">Por lo expuesto, se indica <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</span> días de <span class="doc-fill">{escape(_valor_campo(campos, 'tipo_indicacion', 'Ausencia laboral justificada'))}</span>, con fecha de inicio el <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_inicio'))}</span> y alta estimada el <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_fin'))}</span>.</p>
+    <p class="doc-copy">El presente certificado se extiende a solicitud del/la interesado/a para ser presentado ante <span class="doc-fill">{escape(_valor_campo(campos, 'presentar_ante'))}</span>.</p>
   </div>"""
 
     if tipo_certificado == "ausentismo_escolar":
         return f"""
-  <div class="body-grid">
-    <div class="body-copy">
-      <div class="body-kicker">Certifico</div>
-      <h2>Ausentismo escolar</h2>
-      <p>Certifico que el/la menor <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, hijo/a de <strong>{escape(_valor_campo(campos, 'responsable'))}</strong>, fue evaluado/a por el profesional firmante.</p>
-      <p>Diagnóstico o síntomas presentados: <strong>{diagnostico_html}</strong>.</p>
-      <p>Motivo por el cual estuvo imposibilitado/a de concurrir al establecimiento educativo desde el día <strong>{escape(_valor_campo(campos, 'fecha_desde'))}</strong> hasta el día <strong>{escape(_valor_campo(campos, 'fecha_hasta'))}</strong>, inclusive (<strong>{escape(_valor_campo(campos, 'dias_habiles'))}</strong> días hábiles).</p>
-      <p>Establecimiento educativo: <strong>{escape(_valor_campo(campos, 'institucion'))}</strong>.</p>
+  <div class="doc-body">
+    <div class="doc-title-row">
+      <span class="doc-title-line"></span>
+      <div class="doc-title-text">CERTIFICADO MÉDICO — AUSENTISMO ESCOLAR</div>
+      <span class="doc-title-line"></span>
     </div>
-    <div class="body-side">
-      <div class="side-card">
-        <span class="side-label">Institución</span>
-        <strong>{escape(_valor_campo(campos, 'institucion'))}</strong>
-      </div>
-      <div class="side-card">
-        <span class="side-label">Responsable</span>
-        <strong>{escape(_valor_campo(campos, 'responsable'))}</strong>
-      </div>
-      <div class="side-card">
-        <span class="side-label">Período</span>
-        <strong>{escape(_valor_campo(campos, 'fecha_desde'))}</strong>
-        <small>hasta {escape(_valor_campo(campos, 'fecha_hasta'))}</small>
-      </div>
-    </div>
+    <p class="doc-copy"><strong>CERTIFICO</strong> que el/la menor <span class="doc-fill">{paciente}</span>, de <span class="doc-fill doc-fill-short">{edad_txt}</span> años, DNI Nro. <span class="doc-fill">{documento}</span>, hijo/a de <span class="doc-fill">{escape(_valor_campo(campos, 'responsable'))}</span>.</p>
+    <div class="doc-section-title">DIAGNÓSTICO</div>
+    <div class="doc-label">DIAGNÓSTICO / SÍNTOMAS PRESENTADOS</div>
+    <div class="doc-box">{diagnostico_html}</div>
+    <div class="doc-section-title">PERÍODO DE INASISTENCIA</div>
+    <p class="doc-copy">Motivo por el cual estuvo imposibilitado/a de concurrir al establecimiento educativo desde el día <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_desde'))}</span> hasta el día <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_hasta'))}</span> inclusive (<span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'dias_habiles'))}</span> días hábiles).</p>
+    <p class="doc-copy">Establecimiento educativo: <span class="doc-fill">{escape(_valor_campo(campos, 'institucion'))}</span>.</p>
   </div>"""
 
     if tipo_certificado == "constancia_asistencia":
         return f"""
-  <div class="body-grid">
-    <div class="body-copy">
-      <div class="body-kicker">Hago constar</div>
-      <h2>Constancia de asistencia</h2>
-      <p>Hago constar que <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, concurrió a consulta médica el día <strong>{escape(_valor_campo(campos, 'fecha_asistencia', fecha_emision.split(' ')[0]))}</strong> a las <strong>{escape(_valor_campo(campos, 'hora_asistencia'))}</strong> horas, con una duración aproximada de <strong>{escape(_valor_campo(campos, 'duracion_minutos'))}</strong> minutos.</p>
-      <p>Motivo de la consulta: <strong>{escape(_valor_campo(campos, 'motivo_consulta', diagnostico or 'Consulta médica general'))}</strong>.</p>
-      <p>El presente se extiende a pedido del/la interesado/a, sin que ello implique revelar el diagnóstico, en cumplimiento del secreto médico profesional.</p>
+  <div class="doc-body">
+    <div class="doc-title-row">
+      <span class="doc-title-line"></span>
+      <div class="doc-title-text">CONSTANCIA DE ASISTENCIA MÉDICA</div>
+      <span class="doc-title-line"></span>
     </div>
-    <div class="body-side">
-      <div class="side-card">
-        <span class="side-label">Hora</span>
-        <strong>{escape(_valor_campo(campos, 'hora_asistencia'))}</strong>
-      </div>
-      <div class="side-card">
-        <span class="side-label">Duracion</span>
-        <strong>{escape(_valor_campo(campos, 'duracion_minutos'))} min</strong>
-      </div>
-      <div class="side-card">
-        <span class="side-label">Motivo</span>
-        <strong>{escape(_valor_campo(campos, 'motivo_consulta', diagnostico or 'Consulta médica'))}</strong>
-      </div>
-    </div>
+    <p class="doc-copy"><strong>HAGO CONSTAR</strong> que el/la Sr./Sra. <span class="doc-fill">{paciente}</span>, de <span class="doc-fill doc-fill-short">{edad_txt}</span> años, DNI Nro. <span class="doc-fill">{documento}</span>, concurrió a consulta médica el día <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_asistencia', fecha_emision.split(' ')[0]))}</span> a las <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'hora_asistencia'))}</span> horas, con una duración aproximada de <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'duracion_minutos'))}</span> minutos.</p>
+    <p class="doc-copy">Motivo de la consulta: <span class="doc-fill">{escape(_valor_campo(campos, 'motivo_consulta', diagnostico or 'Consulta médica general'))}</span>.</p>
+    <p class="doc-copy">El presente se extiende a pedido del/la interesado/a, sin que ello implique revelar el diagnóstico, en cumplimiento del secreto médico profesional.</p>
   </div>"""
 
     return f"""
-  <div class="body-grid">
-    <div class="body-copy">
-      <div class="body-kicker">Certifico y prescribo</div>
-      <h2>Reposo domiciliario</h2>
-      <p>Certifico y prescribo que <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, requiere reposo.</p>
-      <p>Diagnóstico o descripción sindrómica: <strong>{diagnostico_html}</strong>.</p>
-      <p>Reposo domiciliario <strong>{escape(_valor_campo(campos, 'tipo_reposo', 'relativo'))}</strong> por <strong>{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</strong> días, desde el <strong>{escape(_valor_campo(campos, 'fecha_inicio'))}</strong> hasta el <strong>{escape(_valor_campo(campos, 'fecha_fin'))}</strong>.</p>
-      <p>Indicaciones adicionales: <strong>{escape(_valor_campo(campos, 'indicaciones_adicionales', 'Sin indicaciones adicionales'))}</strong>.</p>
+  <div class="doc-body">
+    <div class="doc-title-row">
+      <span class="doc-title-line"></span>
+      <div class="doc-title-text">PRESCRIPCIÓN DE REPOSO DOMICILIARIO</div>
+      <span class="doc-title-line"></span>
     </div>
-    <div class="body-side">
-      <div class="side-card">
-        <span class="side-label">Tipo</span>
-        <strong>{escape(_valor_campo(campos, 'tipo_reposo', 'Relativo'))}</strong>
-      </div>
-      <div class="side-card">
-        <span class="side-label">Dias</span>
-        <strong>{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</strong>
-      </div>
-      <div class="side-card">
-        <span class="side-label">Periodo</span>
-        <strong>{escape(_valor_campo(campos, 'fecha_inicio'))}</strong>
-        <small>hasta {escape(_valor_campo(campos, 'fecha_fin'))}</small>
-      </div>
-    </div>
+    <p class="doc-copy"><strong>CERTIFICO Y PRESCRIBO</strong> que el/la Sr./Sra. <span class="doc-fill">{paciente}</span>, de <span class="doc-fill doc-fill-short">{edad_txt}</span> años, DNI Nro. <span class="doc-fill">{documento}</span>, requiere reposo.</p>
+    <div class="doc-section-title">DIAGNÓSTICO</div>
+    <div class="doc-label">DIAGNÓSTICO / DESCRIPCIÓN SINDRÓMICA (CIE-10)</div>
+    <div class="doc-box">{diagnostico_html}</div>
+    <div class="doc-section-title">INDICACIÓN</div>
+    <p class="doc-copy">Reposo domiciliario <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'tipo_reposo', 'relativo'))}</span> por <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</span> días, desde el <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_inicio'))}</span> hasta el <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_fin'))}</span>.</p>
+    <div class="doc-label">INDICACIONES ADICIONALES</div>
+    <div class="doc-box">{escape(_valor_campo(campos, 'indicaciones_adicionales', 'Sin indicaciones adicionales'))}</div>
   </div>"""
 
 
@@ -856,6 +813,7 @@ def certificado_html(
         paciente_nombre=paciente_nombre,
         paciente_documento=paciente_documento,
         edad=edad,
+        sexo_label=sexo_label,
         diagnostico=diagnostico,
         reposo_dias=reposo_dias,
         fecha_emision=fecha_emision,
@@ -981,30 +939,82 @@ body {{
   flex: 1;
   line-height: 1.8;
 }}
-.body-grid {{
-  display: grid; grid-template-columns: 1.4fr .75fr; gap: 18px;
+.doc-body {{
+  color: #111827;
 }}
-.body-kicker {{
-  font-size: 10px; color: var(--teal-dark); letter-spacing: .16em; text-transform: uppercase; font-weight: 800; margin-bottom: 8px;
+.doc-title-row {{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 26px;
 }}
-.body-copy h2 {{
-  font-size: 22px; letter-spacing: -.03em; margin-bottom: 12px;
+.doc-title-line {{
+  height: 1px;
+  background: #d1d5db;
 }}
-.body-copy p {{ text-align: justify; margin-bottom: 12px; }}
-.body-side {{
-  display: flex; flex-direction: column; gap: 12px;
+.doc-title-text {{
+  color: #1d4f91;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }}
-.side-card {{
-  border-radius: 14px; padding: 14px 15px; background: var(--soft-2); border: 1px solid #d8e6f8;
+.doc-section-title {{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  margin: 22px 0 14px;
+  color: #6b7280;
+  font-size: 10px;
+  letter-spacing: .24em;
+  text-transform: uppercase;
 }}
-.side-card strong {{
-  display: block; font-size: 15px; color: var(--ink);
+.doc-section-title::before,
+.doc-section-title::after {{
+  content: "";
+  height: 1px;
+  background: #d1d5db;
 }}
-.side-card small {{
-  display: block; margin-top: 4px; color: var(--muted);
+.doc-label {{
+  color: #6b7280;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
 }}
-.side-label {{
-  display: block; margin-bottom: 6px; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .12em;
+.doc-copy {{
+  font-size: 16px;
+  line-height: 1.95;
+  margin-bottom: 16px;
+}}
+.doc-copy strong {{
+  color: #1d4f91;
+  letter-spacing: .08em;
+}}
+.doc-fill {{
+  display: inline-block;
+  min-width: 150px;
+  border-bottom: 1px solid #bfc6cf;
+  color: #a8adb3;
+  font-style: italic;
+  padding: 0 6px 2px;
+}}
+.doc-fill-short {{
+  min-width: 88px;
+}}
+.doc-box {{
+  min-height: 92px;
+  border: 1px solid #cfd4db;
+  padding: 12px 14px;
+  color: #a8adb3;
+  font-size: 14px;
+  font-style: italic;
+  line-height: 1.6;
+  background: #fff;
 }}
 .note-box {{
   margin-top: 16px; padding: 14px 16px; border-radius: 12px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412;
@@ -1051,7 +1061,10 @@ body {{
   .logo {{ height: 36px; }}
   .cert-title {{ flex-direction: column; align-items: flex-start; }}
   .pac-box {{ grid-template-columns: 1fr; }}
-  .body-grid {{ grid-template-columns: 1fr; }}
+  .doc-title-row,
+  .doc-section-title {{ grid-template-columns: 1fr; gap: 8px; }}
+  .doc-fill {{ min-width: 110px; }}
+  .doc-copy {{ font-size: 14px; }}
   .sig-row {{ flex-direction: column; align-items: center; }}
   .sig-block {{ min-width: unset; }}
 }}

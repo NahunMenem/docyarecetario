@@ -69,7 +69,6 @@ const templates: CertTemplate[] = [
     accent: "#14b8a6",
     requiresDiagnostico: true,
     fields: [
-      { key: "historia_clinica", label: "Historia clínica", placeholder: "Nro. HC", required: false },
       { key: "presentar_ante", label: "Presentar ante", placeholder: "Empresa / empleador / organismo", required: true },
       {
         key: "tipo_indicacion",
@@ -198,16 +197,31 @@ function renderField(
 }
 
 function patientDisplay(paciente?: Paciente) {
+  const edad = (() => {
+    if (!paciente?.fecha_nacimiento) return "XX";
+    const nacimiento = new Date(paciente.fecha_nacimiento);
+    if (Number.isNaN(nacimiento.getTime())) return "XX";
+    const hoy = new Date();
+    let years = hoy.getFullYear() - nacimiento.getFullYear();
+    const pasoCumple =
+      hoy.getMonth() > nacimiento.getMonth() ||
+      (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() >= nacimiento.getDate());
+    if (!pasoCumple) years -= 1;
+    return String(years);
+  })();
+
   if (!paciente) {
     return {
       nombre: "Nombre y apellido completo",
       documento: "00.000.000",
+      edad,
     };
   }
 
   return {
     nombre: `${paciente.nombre} ${paciente.apellido}`,
     documento: paciente.nro_documento,
+    edad,
   };
 }
 
@@ -217,16 +231,14 @@ function renderTemplateGuide(
   campos: Record<string, string>,
 ) {
   const data = patientDisplay(paciente);
-  const edad = "XX";
 
   if (template.id === "ausentismo_laboral") {
     return (
       <>
         <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9 }}>
           <strong style={{ color: "var(--primary-dark)", letterSpacing: "0.08em" }}>CERTIFICO</strong> que el/la Sr./Sra.
-          {" "}<span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{edad}</span> años,
-          DNI Nro. <span style={{ color: "var(--text-muted)" }}>{data.documento}</span>, cuya historia clínica Nro.
-          {" "}<span style={{ color: "var(--text-muted)" }}>{campos.historia_clinica || "HC"}</span> consta en mi poder.
+          {" "}<span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{data.edad}</span> años,
+          DNI Nro. <span style={{ color: "var(--text-muted)" }}>{data.documento}</span>.
         </p>
         <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9, marginTop: 12 }}>
           Por lo expuesto, se indica <span style={{ color: "var(--text-muted)" }}>{campos.dias_indicados || "Nro."}</span> días de{" "}
@@ -243,7 +255,7 @@ function renderTemplateGuide(
       <>
         <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9 }}>
           <strong style={{ color: "var(--primary-dark)", letterSpacing: "0.08em" }}>CERTIFICO</strong> que el/la menor{" "}
-          <span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{edad}</span> años,
+          <span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{data.edad}</span> años,
           DNI Nro. <span style={{ color: "var(--text-muted)" }}>{data.documento}</span>, hijo/a de{" "}
           <span style={{ color: "var(--text-muted)" }}>{campos.responsable || "Nombre del padre / madre / tutor"}</span>.
         </p>
@@ -260,7 +272,7 @@ function renderTemplateGuide(
     return (
       <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9 }}>
         <strong style={{ color: "var(--primary-dark)", letterSpacing: "0.08em" }}>HAGO CONSTAR</strong> que el/la Sr./Sra.{" "}
-        <span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{edad}</span> años,
+        <span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{data.edad}</span> años,
         DNI Nro. <span style={{ color: "var(--text-muted)" }}>{data.documento}</span>, concurrió a consulta médica el día{" "}
         <span style={{ color: "var(--text-muted)" }}>{campos.fecha_asistencia || "dd/mm/aaaa"}</span> a las{" "}
         <span style={{ color: "var(--text-muted)" }}>{campos.hora_asistencia || "HH:MM"}</span> horas, con una duración aproximada de{" "}
@@ -273,7 +285,7 @@ function renderTemplateGuide(
     <>
       <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9 }}>
         <strong style={{ color: "var(--primary-dark)", letterSpacing: "0.08em" }}>CERTIFICO Y PRESCRIBO</strong> que el/la Sr./Sra.{" "}
-        <span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{edad}</span> años,
+        <span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{data.edad}</span> años,
         DNI Nro. <span style={{ color: "var(--text-muted)" }}>{data.documento}</span>, requiere reposo.
       </p>
       <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9, marginTop: 12 }}>
