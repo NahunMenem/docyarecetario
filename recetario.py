@@ -214,25 +214,25 @@ def _render_certificado_body(
         return f"""
   <div class="body-grid">
     <div class="body-copy">
-      <div class="body-kicker">Constancia profesional</div>
+      <div class="body-kicker">Certifico</div>
       <h2>Ausentismo laboral</h2>
-      <p>Se deja constancia de que <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, fue evaluado/a por el profesional firmante en fecha <strong>{fecha_emision}</strong>.</p>
-      <p>Diagnóstico o motivo clínico informado: <strong>{diagnostico_html}</strong>.</p>
-      <p>Se indica <strong>{escape(_valor_campo(campos, 'tipo_indicacion', 'ausencia laboral justificada'))}</strong> por <strong>{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</strong> día(s), desde <strong>{escape(_valor_campo(campos, 'fecha_inicio'))}</strong> hasta <strong>{escape(_valor_campo(campos, 'fecha_fin'))}</strong>.</p>
+      <p>Certifico que <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, consta en mi poder{f" la historia clínica N° <strong>{escape(_valor_campo(campos, 'historia_clinica'))}</strong>" if _valor_campo(campos, 'historia_clinica', '') else ""}.</p>
+      <p>Diagnóstico o descripción sindrómica: <strong>{diagnostico_html}</strong>.</p>
+      <p>Por lo expuesto, se indica <strong>{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</strong> día(s) de <strong>{escape(_valor_campo(campos, 'tipo_indicacion', 'ausencia laboral justificada'))}</strong>, con fecha de inicio el <strong>{escape(_valor_campo(campos, 'fecha_inicio'))}</strong> y alta estimada el <strong>{escape(_valor_campo(campos, 'fecha_fin'))}</strong>.</p>
       <p>El presente se extiende para ser presentado ante <strong>{escape(_valor_campo(campos, 'presentar_ante'))}</strong>.</p>
     </div>
     <div class="body-side">
       <div class="side-card">
-        <span class="side-label">Indicacion</span>
+        <span class="side-label">Indicación médica</span>
         <strong>{escape(_valor_campo(campos, 'tipo_indicacion', 'Ausencia laboral justificada'))}</strong>
       </div>
       <div class="side-card">
-        <span class="side-label">Periodo</span>
+        <span class="side-label">Período</span>
         <strong>{escape(_valor_campo(campos, 'fecha_inicio'))}</strong>
         <small>hasta {escape(_valor_campo(campos, 'fecha_fin'))}</small>
       </div>
       <div class="side-card">
-        <span class="side-label">Dias</span>
+        <span class="side-label">Días</span>
         <strong>{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</strong>
       </div>
     </div>
@@ -242,16 +242,16 @@ def _render_certificado_body(
         return f"""
   <div class="body-grid">
     <div class="body-copy">
-      <div class="body-kicker">Certificación para institución educativa</div>
+      <div class="body-kicker">Certifico</div>
       <h2>Ausentismo escolar</h2>
-      <p>Se certifica que <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, fue evaluado/a por el profesional firmante.</p>
-      <p>Motivo clínico o cuadro constatado: <strong>{diagnostico_html}</strong>.</p>
-      <p>Por tal motivo, estuvo imposibilitado/a de concurrir al establecimiento educativo <strong>{escape(_valor_campo(campos, 'institucion'))}</strong> desde <strong>{escape(_valor_campo(campos, 'fecha_desde'))}</strong> hasta <strong>{escape(_valor_campo(campos, 'fecha_hasta'))}</strong>, por <strong>{escape(_valor_campo(campos, 'dias_habiles'))}</strong> día(s) hábiles.</p>
-      <p>Consta además que el presente se emite a solicitud de <strong>{escape(_valor_campo(campos, 'responsable'))}</strong>.</p>
+      <p>Certifico que el/la menor <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, hijo/a de <strong>{escape(_valor_campo(campos, 'responsable'))}</strong>, fue evaluado/a por el profesional firmante.</p>
+      <p>Diagnóstico o síntomas presentados: <strong>{diagnostico_html}</strong>.</p>
+      <p>Motivo por el cual estuvo imposibilitado/a de concurrir al establecimiento educativo desde el día <strong>{escape(_valor_campo(campos, 'fecha_desde'))}</strong> hasta el día <strong>{escape(_valor_campo(campos, 'fecha_hasta'))}</strong>, inclusive (<strong>{escape(_valor_campo(campos, 'dias_habiles'))}</strong> días hábiles).</p>
+      <p>Establecimiento educativo: <strong>{escape(_valor_campo(campos, 'institucion'))}</strong>.</p>
     </div>
     <div class="body-side">
       <div class="side-card">
-        <span class="side-label">Institucion</span>
+        <span class="side-label">Institución</span>
         <strong>{escape(_valor_campo(campos, 'institucion'))}</strong>
       </div>
       <div class="side-card">
@@ -259,7 +259,7 @@ def _render_certificado_body(
         <strong>{escape(_valor_campo(campos, 'responsable'))}</strong>
       </div>
       <div class="side-card">
-        <span class="side-label">Periodo</span>
+        <span class="side-label">Período</span>
         <strong>{escape(_valor_campo(campos, 'fecha_desde'))}</strong>
         <small>hasta {escape(_valor_campo(campos, 'fecha_hasta'))}</small>
       </div>
@@ -270,12 +270,11 @@ def _render_certificado_body(
         return f"""
   <div class="body-grid">
     <div class="body-copy">
-      <div class="body-kicker">Documento sin revelación diagnóstica obligatoria</div>
+      <div class="body-kicker">Hago constar</div>
       <h2>Constancia de asistencia</h2>
-      <p>Se deja constancia de que <strong>{paciente}</strong>, {documento}, concurrió a consulta médica el día <strong>{escape(_valor_campo(campos, 'fecha_asistencia', fecha_emision.split(' ')[0]))}</strong> a las <strong>{escape(_valor_campo(campos, 'hora_asistencia'))}</strong>.</p>
-      <p>La atención tuvo una duración aproximada de <strong>{escape(_valor_campo(campos, 'duracion_minutos'))}</strong> minutos.</p>
-      <p>Motivo de consulta consignado: <strong>{escape(_valor_campo(campos, 'motivo_consulta', diagnostico or 'Consulta médica general'))}</strong>.</p>
-      <p>La presente constancia se emite a pedido del/la interesado/a para ser presentada ante quien corresponda, manteniendo reserva profesional sobre detalles clínicos adicionales.</p>
+      <p>Hago constar que <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, concurrió a consulta médica el día <strong>{escape(_valor_campo(campos, 'fecha_asistencia', fecha_emision.split(' ')[0]))}</strong> a las <strong>{escape(_valor_campo(campos, 'hora_asistencia'))}</strong> horas, con una duración aproximada de <strong>{escape(_valor_campo(campos, 'duracion_minutos'))}</strong> minutos.</p>
+      <p>Motivo de la consulta: <strong>{escape(_valor_campo(campos, 'motivo_consulta', diagnostico or 'Consulta médica general'))}</strong>.</p>
+      <p>El presente se extiende a pedido del/la interesado/a, sin que ello implique revelar el diagnóstico, en cumplimiento del secreto médico profesional.</p>
     </div>
     <div class="body-side">
       <div class="side-card">
@@ -296,11 +295,11 @@ def _render_certificado_body(
     return f"""
   <div class="body-grid">
     <div class="body-copy">
-      <div class="body-kicker">Indicación clínica</div>
+      <div class="body-kicker">Certifico y prescribo</div>
       <h2>Reposo domiciliario</h2>
-      <p>Se certifica que <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, fue evaluado/a por el profesional firmante.</p>
-      <p>Diagnóstico o cuadro clínico: <strong>{diagnostico_html}</strong>.</p>
-      <p>Se prescribe <strong>reposo domiciliario {escape(_valor_campo(campos, 'tipo_reposo', 'relativo'))}</strong> por <strong>{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</strong> día(s), desde <strong>{escape(_valor_campo(campos, 'fecha_inicio'))}</strong> hasta <strong>{escape(_valor_campo(campos, 'fecha_fin'))}</strong>.</p>
+      <p>Certifico y prescribo que <strong>{paciente}</strong>, {documento}, de <strong>{edad_txt}</strong> años, requiere reposo.</p>
+      <p>Diagnóstico o descripción sindrómica: <strong>{diagnostico_html}</strong>.</p>
+      <p>Reposo domiciliario <strong>{escape(_valor_campo(campos, 'tipo_reposo', 'relativo'))}</strong> por <strong>{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</strong> días, desde el <strong>{escape(_valor_campo(campos, 'fecha_inicio'))}</strong> hasta el <strong>{escape(_valor_campo(campos, 'fecha_fin'))}</strong>.</p>
       <p>Indicaciones adicionales: <strong>{escape(_valor_campo(campos, 'indicaciones_adicionales', 'Sin indicaciones adicionales'))}</strong>.</p>
     </div>
     <div class="body-side">

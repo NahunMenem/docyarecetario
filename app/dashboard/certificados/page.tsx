@@ -69,6 +69,7 @@ const templates: CertTemplate[] = [
     accent: "#14b8a6",
     requiresDiagnostico: true,
     fields: [
+      { key: "historia_clinica", label: "Historia clínica", placeholder: "Nro. HC", required: false },
       { key: "presentar_ante", label: "Presentar ante", placeholder: "Empresa / empleador / organismo", required: true },
       {
         key: "tipo_indicacion",
@@ -196,6 +197,95 @@ function renderField(
   );
 }
 
+function patientDisplay(paciente?: Paciente) {
+  if (!paciente) {
+    return {
+      nombre: "Nombre y apellido completo",
+      documento: "00.000.000",
+    };
+  }
+
+  return {
+    nombre: `${paciente.nombre} ${paciente.apellido}`,
+    documento: paciente.nro_documento,
+  };
+}
+
+function renderTemplateGuide(
+  template: CertTemplate,
+  paciente: Paciente | undefined,
+  campos: Record<string, string>,
+) {
+  const data = patientDisplay(paciente);
+  const edad = "XX";
+
+  if (template.id === "ausentismo_laboral") {
+    return (
+      <>
+        <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9 }}>
+          <strong style={{ color: "var(--primary-dark)", letterSpacing: "0.08em" }}>CERTIFICO</strong> que el/la Sr./Sra.
+          {" "}<span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{edad}</span> años,
+          DNI Nro. <span style={{ color: "var(--text-muted)" }}>{data.documento}</span>, cuya historia clínica Nro.
+          {" "}<span style={{ color: "var(--text-muted)" }}>{campos.historia_clinica || "HC"}</span> consta en mi poder.
+        </p>
+        <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9, marginTop: 12 }}>
+          Por lo expuesto, se indica <span style={{ color: "var(--text-muted)" }}>{campos.dias_indicados || "Nro."}</span> días de{" "}
+          <span style={{ color: "var(--text-muted)" }}>{campos.tipo_indicacion || "Seleccionar"}</span>, con fecha de inicio el{" "}
+          <span style={{ color: "var(--text-muted)" }}>{campos.fecha_inicio || "dd/mm/aaaa"}</span> y alta estimada el{" "}
+          <span style={{ color: "var(--text-muted)" }}>{campos.fecha_fin || "dd/mm/aaaa"}</span>.
+        </p>
+      </>
+    );
+  }
+
+  if (template.id === "ausentismo_escolar") {
+    return (
+      <>
+        <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9 }}>
+          <strong style={{ color: "var(--primary-dark)", letterSpacing: "0.08em" }}>CERTIFICO</strong> que el/la menor{" "}
+          <span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{edad}</span> años,
+          DNI Nro. <span style={{ color: "var(--text-muted)" }}>{data.documento}</span>, hijo/a de{" "}
+          <span style={{ color: "var(--text-muted)" }}>{campos.responsable || "Nombre del padre / madre / tutor"}</span>.
+        </p>
+        <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9, marginTop: 12 }}>
+          Motivo por el cual estuvo imposibilitado/a de concurrir al establecimiento educativo desde el día{" "}
+          <span style={{ color: "var(--text-muted)" }}>{campos.fecha_desde || "dd/mm/aaaa"}</span> hasta el día{" "}
+          <span style={{ color: "var(--text-muted)" }}>{campos.fecha_hasta || "dd/mm/aaaa"}</span>, inclusive ({campos.dias_habiles || "Nro."} días hábiles).
+        </p>
+      </>
+    );
+  }
+
+  if (template.id === "constancia_asistencia") {
+    return (
+      <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9 }}>
+        <strong style={{ color: "var(--primary-dark)", letterSpacing: "0.08em" }}>HAGO CONSTAR</strong> que el/la Sr./Sra.{" "}
+        <span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{edad}</span> años,
+        DNI Nro. <span style={{ color: "var(--text-muted)" }}>{data.documento}</span>, concurrió a consulta médica el día{" "}
+        <span style={{ color: "var(--text-muted)" }}>{campos.fecha_asistencia || "dd/mm/aaaa"}</span> a las{" "}
+        <span style={{ color: "var(--text-muted)" }}>{campos.hora_asistencia || "HH:MM"}</span> horas, con una duración aproximada de{" "}
+        <span style={{ color: "var(--text-muted)" }}>{campos.duracion_minutos || "XX"}</span> minutos.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9 }}>
+        <strong style={{ color: "var(--primary-dark)", letterSpacing: "0.08em" }}>CERTIFICO Y PRESCRIBO</strong> que el/la Sr./Sra.{" "}
+        <span style={{ color: "var(--text-muted)" }}>{data.nombre}</span>, de <span style={{ color: "var(--text-muted)" }}>{edad}</span> años,
+        DNI Nro. <span style={{ color: "var(--text-muted)" }}>{data.documento}</span>, requiere reposo.
+      </p>
+      <p style={{ color: "var(--text-main)", fontSize: "0.95rem", lineHeight: 1.9, marginTop: 12 }}>
+        Reposo domiciliario <span style={{ color: "var(--text-muted)" }}>{campos.tipo_reposo || "absoluto"}</span> por{" "}
+        <span style={{ color: "var(--text-muted)" }}>{campos.dias_indicados || "XX"}</span> días, desde el{" "}
+        <span style={{ color: "var(--text-muted)" }}>{campos.fecha_inicio || "dd/mm/aaaa"}</span> hasta el{" "}
+        <span style={{ color: "var(--text-muted)" }}>{campos.fecha_fin || "dd/mm/aaaa"}</span>.
+      </p>
+    </>
+  );
+}
+
 function NuevoCertificadoModal({
   pacientes, onSave, onClose, loading, error,
 }: {
@@ -310,6 +400,19 @@ function NuevoCertificadoModal({
                   Elegí un paciente para precompletar el certificado.
                 </div>
               )}
+            </div>
+
+            <div style={{ padding: "1rem", borderRadius: 18, background: "rgba(255,255,255,0.04)", border: "1px solid var(--glass-border)" }}>
+              <div style={{ ...lbl, marginBottom: 10 }}>Estructura del modelo</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <div style={{ textAlign: "center", color: "var(--primary-dark)", fontSize: "0.84rem", fontWeight: 800, letterSpacing: "0.28em", textTransform: "uppercase" }}>
+                  {template.label}
+                </div>
+                <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)" }} />
+                <div style={{ fontFamily: "Georgia, serif" }}>
+                  {renderTemplateGuide(template, paciente, campos)}
+                </div>
+              </div>
             </div>
           </div>
 
