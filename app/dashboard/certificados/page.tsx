@@ -335,9 +335,9 @@ function NuevoCertificadoModal({
       position: "fixed", inset: 0, zIndex: 200,
       background: "rgba(2,6,23,0.7)", backdropFilter: "blur(10px)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "1rem", overflowY: "auto",
+      padding: "1.25rem", overflowY: "auto",
     }}>
-      <div className="glass-card" style={{ width: "100%", maxWidth: 900, padding: "1.6rem", margin: "auto", maxHeight: "calc(100vh - 2rem)", overflowY: "auto" }}>
+      <div className="glass-card" style={{ width: "min(1240px, 100%)", padding: "1.6rem", margin: "auto", maxHeight: "92vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", gap: "1rem" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: 4 }}>
@@ -353,9 +353,9 @@ function NuevoCertificadoModal({
           </button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.4fr", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1rem", alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
-            <div style={{ padding: "1rem", borderRadius: 18, background: "rgba(255,255,255,0.04)", border: "1px solid var(--glass-border)" }}>
+            <div style={{ padding: "1rem", borderRadius: 18, background: "rgba(255,255,255,0.04)", border: "1px solid var(--glass-border)", minHeight: "100%" }}>
               <div style={{ ...lbl, marginBottom: 10 }}>Modelo</div>
               <div style={{ display: "grid", gap: "0.7rem" }}>
                 {templates.map((item) => {
@@ -463,7 +463,7 @@ function NuevoCertificadoModal({
                   </div>
                 )}
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.9rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.9rem" }}>
                   {template.fields.map((field) => (
                     <div key={field.key} style={field.type === "textarea" ? { gridColumn: "1 / -1" } : undefined}>
                       <label style={lbl}>{field.label}{field.required ? " *" : ""}</label>
@@ -510,7 +510,7 @@ function NuevoCertificadoModal({
               )}
             </div>
 
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", paddingTop: "0.25rem" }}>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", paddingTop: "0.25rem", position: "sticky", bottom: 0, background: "linear-gradient(180deg, rgba(15,23,42,0), rgba(15,23,42,0.96) 30%)", paddingBottom: "0.2rem" }}>
               <button className="btn-outline" onClick={onClose} disabled={loading}>Cancelar</button>
               <button
                 className="btn-primary"

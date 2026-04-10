@@ -902,42 +902,10 @@ body {{
   font-size: 11px; color: var(--muted); line-height: 1.8;
 }}
 .header-right strong {{ color: var(--ink); }}
-.cert-title {{
-  display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  margin-bottom: 18px;
-}}
-.cert-title-main strong {{
-  display: block; font-size: 24px; color: var(--ink); letter-spacing: -.03em;
-}}
-.cert-title-main span {{
-  display: block; margin-top: 4px; color: var(--teal-dark); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
-}}
-.cert-pill {{
-  background: linear-gradient(135deg, #0ae6c7, var(--teal-dark));
-  color: #fff; border-radius: 999px; padding: 8px 14px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em;
-}}
-.pac-box {{
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
-  margin-bottom: 20px;
-}}
-.pac-field {{
-  min-width: 0; padding: 12px 14px; border-radius: 12px; background: var(--soft);
-  border: 1px solid rgba(20,184,166,0.15);
-}}
-.pac-field.wide {{ grid-column: 1 / -1; background: linear-gradient(180deg, var(--soft), #fff); }}
-.pac-field label {{
-  display: block; font-size: 9px; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;
-}}
-.pac-field strong {{ font-size: 13px; color: var(--ink); }}
 .cert-body {{
-  border: 1px solid rgba(15,118,110,0.14);
-  border-radius: 18px;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfffe 100%);
-  padding: 24px 24px 20px;
-  margin-bottom: 24px;
+  padding: 4px 0 0;
+  margin-bottom: 28px;
   flex: 1;
-  line-height: 1.8;
 }}
 .doc-body {{
   color: #111827;
@@ -1017,7 +985,13 @@ body {{
   background: #fff;
 }}
 .note-box {{
-  margin-top: 16px; padding: 14px 16px; border-radius: 12px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid #cfd4db;
+  background: #fff;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
 }}
 .sig-row {{
   display: flex;
@@ -1059,8 +1033,6 @@ body {{
   .page {{ padding: 20px 18px; min-height: unset; margin: 8px; }}
   .header {{ grid-template-columns: 1fr; }}
   .logo {{ height: 36px; }}
-  .cert-title {{ flex-direction: column; align-items: flex-start; }}
-  .pac-box {{ grid-template-columns: 1fr; }}
   .doc-title-row,
   .doc-section-title {{ grid-template-columns: 1fr; gap: 8px; }}
   .doc-fill {{ min-width: 110px; }}
@@ -1093,26 +1065,6 @@ body {{
       <strong>ID:</strong> {cert_id_val:08d}<br>
       <strong>Modelo:</strong> {escape(titulo_cert)}
     </div>
-  </div>
-
-  <div class="cert-title">
-    <div class="cert-title-main">
-      <strong>{escape(titulo_cert)}</strong>
-      <span>Documento médico con validez profesional</span>
-    </div>
-    <div class="cert-pill">DocYa</div>
-  </div>
-
-  <div class="pac-box">
-    <div class="pac-field wide">
-      <label>Paciente</label>
-      <strong>{escape(paciente_nombre)}</strong>
-    </div>
-    <div class="pac-field"><label>{escape(tipo_doc)}</label><strong>{escape(nro_doc)}</strong></div>
-    {"<div class='pac-field'><label>CUIL</label><strong>" + escape(cuil) + "</strong></div>" if cuil else ""}
-    <div class="pac-field"><label>Sexo</label><strong>{sexo_label}</strong></div>
-    <div class="pac-field"><label>F. Nacimiento</label><strong>{fecha_nac_str}</strong></div>
-    {"<div class='pac-field'><label>Obra Social</label><strong>" + escape(obra_social) + "</strong></div>" if obra_social else ""}
   </div>
 
   <div class="cert-body">
