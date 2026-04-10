@@ -333,11 +333,11 @@ function NuevoCertificadoModal({
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 200,
-      background: "rgba(2,6,23,0.7)", backdropFilter: "blur(10px)",
+      background: "rgba(2,6,23,0.84)", backdropFilter: "blur(14px)",
       display: "flex", alignItems: "center", justifyContent: "center",
       padding: "1.25rem", overflowY: "auto",
     }}>
-      <div className="glass-card" style={{ width: "min(1240px, 100%)", padding: "1.6rem", margin: "auto", maxHeight: "92vh", overflowY: "auto" }}>
+      <div className="glass-card" style={{ width: "min(1240px, 100%)", padding: "1.6rem", margin: "auto", maxHeight: "92vh", overflowY: "auto", background: "linear-gradient(180deg, rgba(15,23,42,0.96), rgba(15,23,42,0.93))", border: "1px solid rgba(255,255,255,0.12)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", gap: "1rem" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: 4 }}>
@@ -355,7 +355,7 @@ function NuevoCertificadoModal({
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1rem", alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
-            <div style={{ padding: "1rem", borderRadius: 18, background: "rgba(255,255,255,0.04)", border: "1px solid var(--glass-border)", minHeight: "100%" }}>
+            <div style={{ padding: "1rem", borderRadius: 18, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", minHeight: "100%" }}>
               <div style={{ ...lbl, marginBottom: 10 }}>Modelo</div>
               <div style={{ display: "grid", gap: "0.7rem" }}>
                 {templates.map((item) => {
@@ -391,7 +391,7 @@ function NuevoCertificadoModal({
               </div>
             </div>
 
-            <div style={{ padding: "1rem", borderRadius: 18, background: "linear-gradient(180deg, rgba(10,230,199,0.1), rgba(10,230,199,0.02))", border: "1px solid rgba(10,230,199,0.15)" }}>
+            <div style={{ padding: "1rem", borderRadius: 18, background: "linear-gradient(180deg, rgba(10,230,199,0.16), rgba(10,230,199,0.07))", border: "1px solid rgba(10,230,199,0.24)" }}>
               <div style={{ ...lbl, marginBottom: 10 }}>Paciente seleccionado</div>
               {paciente ? (
                 <>
@@ -414,7 +414,7 @@ function NuevoCertificadoModal({
               )}
             </div>
 
-            <div style={{ padding: "1rem", borderRadius: 18, background: "rgba(255,255,255,0.04)", border: "1px solid var(--glass-border)" }}>
+            <div style={{ padding: "1rem", borderRadius: 18, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
               <div style={{ ...lbl, marginBottom: 10 }}>Estructura del modelo</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 <div style={{ textAlign: "center", color: "var(--primary-dark)", fontSize: "0.84rem", fontWeight: 800, letterSpacing: "0.28em", textTransform: "uppercase" }}>
@@ -429,7 +429,7 @@ function NuevoCertificadoModal({
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div style={{ padding: "1rem", borderRadius: 18, background: "rgba(255,255,255,0.04)", border: "1px solid var(--glass-border)" }}>
+            <div style={{ padding: "1rem", borderRadius: 18, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0.9rem" }}>
                 <div>
                   <label style={lbl}>Paciente *</label>
