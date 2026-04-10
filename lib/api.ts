@@ -321,13 +321,17 @@ export async function anularReceta(
 
 export interface CertificadoIn {
   paciente_id: number;
+  tipo_certificado: "ausentismo_laboral" | "ausentismo_escolar" | "constancia_asistencia" | "reposo_domiciliario";
   diagnostico?: string;
   reposo_dias?: number;
   observaciones?: string;
+  campos?: Record<string, string | number | undefined>;
 }
 
 export interface CertificadoResumen {
   id: number;
+  tipo_certificado: string;
+  tipo_label: string;
   diagnostico: string | null;
   reposo_dias: number | null;
   fecha: string | null;
