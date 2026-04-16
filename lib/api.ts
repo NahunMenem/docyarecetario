@@ -270,17 +270,28 @@ export interface RecetaIn {
 export interface RecetaResumen {
   id: number;
   uuid: string;
+  cuir?: string;
   estado: "valida" | "anulada";
   diagnostico: string | null;
   fecha: string | null;
   paciente: string;
   documento: string;
+  sent_to_farmalink?: boolean;
 }
 
 export async function emitirReceta(
   data: RecetaIn,
   token: string
-): Promise<{ ok: boolean; receta_id: number; uuid: string; url_html: string }> {
+): Promise<{
+  ok: boolean;
+  id: number;
+  receta_id: number;
+  uuid: string;
+  cuir: string;
+  url_html: string;
+  pdf_url: string;
+  status: string;
+}> {
   const res = await fetch(`${BASE}/recetario/recetas`, {
     method: "POST",
     headers: authHeaders(token),
