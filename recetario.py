@@ -2350,6 +2350,571 @@ def _html_verificacion(uuid, cuir, estado, es_valida, fecha, paciente,
 </html>"""
 
 
+# ====================================================
+# 📋 ÓRDENES MÉDICAS
+# ====================================================
+
+ORDEN_TIPOS = {
+    "laboratorio": "Orden de laboratorio",
+    "imagenes":    "Orden de imágenes",
+    "derivacion":  "Derivación / Interconsulta",
+}
+
+ORDEN_COLORES = {
+    "laboratorio": {"color": "#0F6E56", "light": "#E1F5EE", "border": "#1D9E75"},
+    "imagenes":    {"color": "#3C3489", "light": "#EEEDFE", "border": "#534AB7"},
+    "derivacion":  {"color": "#0C447C", "light": "#E6F1FB", "border": "#185FA5"},
+}
+
+ORDEN_PRIORIDAD_COLORS = {
+    "Normal":      {"color": "#0F6E56", "bg": "#E1F5EE"},
+    "Preferencial": {"color": "#BA7517", "bg": "#FAEEDA"},
+    "Urgente":     {"color": "#A32D2D", "bg": "#FCEBEB"},
+}
+
+
+class EstudioItem(BaseModel):
+    nombre: str
+    obs:    Optional[str] = None
+
+
+class OrdenIn(BaseModel):
+    paciente_id:  int
+    tipo_orden:   str
+    estudios:     List[EstudioItem]
+    diagnostico:  str
+    cie10:        Optional[str] = None
+    indicaciones: Optional[str] = None
+    prioridad:    str = "Normal"
+
+
+def _ensure_recetario_ordenes_schema(db) -> None:
+    cur = db.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS recetario_ordenes (
+            id           SERIAL PRIMARY KEY,
+            medico_id    INTEGER NOT NULL,
+            paciente_id  INTEGER NOT NULL,
+            tipo_orden   VARCHAR(20) NOT NULL,
+            estudios     JSONB NOT NULL DEFAULT '[]',
+            diagnostico  TEXT NOT NULL,
+            cie10        VARCHAR(20),
+            indicaciones TEXT,
+            prioridad    VARCHAR(20) NOT NULL DEFAULT 'Normal',
+            cuir         VARCHAR(60) UNIQUE,
+            uuid         UUID NOT NULL DEFAULT gen_random_uuid(),
+            estado       VARCHAR(20) NOT NULL DEFAULT 'valida',
+            creado_en    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """)
+    db.commit()
+
+
+def _generate_unique_cuir_orden(db) -> str:
+    cur = db.cursor()
+    for _ in range(25):
+        cuir = _build_cuir(_generate_prescription_group_id(), item_number="02")
+        cur.execute("SELECT 1 FROM recetario_ordenes WHERE cuir=%s LIMIT 1", (cuir,))
+        if not cur.fetchone():
+            return cuir
+        time.sleep(0.005)
+    raise HTTPException(500, "No se pudo generar un CUIR único para la orden")
+
+
+@router.post("/ordenes", status_code=201)
+def emitir_orden(
+    data: OrdenIn,
+    medico_id: int = Depends(get_medico_id),
+    db=Depends(get_db),
+):
+    if data.tipo_orden not in ORDEN_TIPOS:
+        raise HTTPException(400, f"tipo_orden inválido. Opciones: {list(ORDEN_TIPOS.keys())}")
+    if not data.estudios:
+        raise HTTPException(400, "Debés incluir al menos un estudio")
+    if len(data.diagnostico.strip()) < 3:
+        raise HTTPException(400, "El diagnóstico es obligatorio")
+    if data.prioridad not in ("Normal", "Preferencial", "Urgente"):
+        raise HTTPException(400, "prioridad inválida")
+
+    _ensure_recetario_ordenes_schema(db)
+    cur = db.cursor()
+
+    cur.execute("""
+        SELECT id FROM recetario_pacientes
+        WHERE id=%s AND medico_id=%s
+    """, (data.paciente_id, medico_id))
+    if not cur.fetchone():
+        raise HTTPException(404, "Paciente no encontrado en tu listado")
+
+    import json as _json
+    estudios_json = _json.dumps([e.dict() for e in data.estudios], ensure_ascii=False)
+    cuir = _generate_unique_cuir_orden(db)
+
+    cur.execute("""
+        INSERT INTO recetario_ordenes
+            (medico_id, paciente_id, tipo_orden, estudios, diagnostico,
+             cie10, indicaciones, prioridad, cuir)
+        VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s)
+        RETURNING id, uuid, creado_en, cuir
+    """, (
+        medico_id, data.paciente_id, data.tipo_orden,
+        estudios_json, data.diagnostico,
+        data.cie10, data.indicaciones, data.prioridad, cuir,
+    ))
+    row = cur.fetchone()
+    db.commit()
+
+    base = os.getenv("API_BASE_URL", "https://docya-railway-production.up.railway.app")
+    return {
+        "ok": True,
+        "orden_id": row[0],
+        "id": row[0],
+        "uuid": str(row[1]),
+        "cuir": row[3],
+        "creado_en": str(row[2]),
+        "url_html": f"{base}/recetario/ordenes/{row[0]}/html",
+    }
+
+
+@router.get("/ordenes")
+def listar_ordenes(
+    medico_id: int = Depends(get_medico_id),
+    db=Depends(get_db),
+):
+    _ensure_recetario_ordenes_schema(db)
+    cur = db.cursor()
+    cur.execute("""
+        SELECT o.id, o.uuid, o.cuir, o.tipo_orden, o.diagnostico,
+               o.prioridad, o.estado, o.creado_en,
+               p.nombre, p.apellido, p.tipo_documento, p.nro_documento
+        FROM recetario_ordenes o
+        JOIN recetario_pacientes p ON p.id = o.paciente_id
+        WHERE o.medico_id=%s
+        ORDER BY o.creado_en DESC
+    """, (medico_id,))
+    rows = cur.fetchall()
+    return {"total": len(rows), "ordenes": [
+        {
+            "id": r[0], "uuid": str(r[1]), "cuir": r[2],
+            "tipo_orden": r[3], "tipo_label": ORDEN_TIPOS.get(r[3], r[3]),
+            "diagnostico": r[4], "prioridad": r[5], "estado": r[6],
+            "fecha": r[7].strftime("%d/%m/%Y %H:%M") if r[7] else None,
+            "paciente": f"{r[9]}, {r[8]}",
+            "documento": f"{r[10]} {r[11]}",
+        }
+        for r in rows
+    ]}
+
+
+@router.get("/ordenes/{orden_id}/html", response_class=HTMLResponse)
+def orden_html(
+    orden_id: int,
+    medico_id: int = Depends(get_medico_id),
+    db=Depends(get_db),
+):
+    _ensure_recetario_ordenes_schema(db)
+    cur = db.cursor()
+    cur.execute("""
+        SELECT o.id, o.uuid, o.tipo_orden, o.estudios, o.diagnostico, o.cie10,
+               o.indicaciones, o.prioridad, o.cuir, o.creado_en,
+               p.nombre, p.apellido, p.tipo_documento, p.nro_documento,
+               p.sexo, p.fecha_nacimiento, p.obra_social,
+               m.full_name, m.matricula, m.especialidad, m.tipo, m.firma_url
+        FROM recetario_ordenes o
+        JOIN recetario_pacientes p ON p.id = o.paciente_id
+        JOIN medicos             m ON m.id = o.medico_id
+        WHERE o.id=%s AND o.medico_id=%s
+    """, (orden_id, medico_id))
+    row = cur.fetchone()
+    if not row:
+        raise HTTPException(404, "Orden no encontrada")
+
+    (oid, uuid_orden, tipo_orden, estudios_raw, diagnostico, cie10,
+     indicaciones, prioridad, cuir, creado_en,
+     pac_nombre, pac_apellido, tipo_doc, nro_doc,
+     sexo, fecha_nac, obra_social,
+     med_nombre, matricula, especialidad, tipo_med, firma_url) = row
+
+    import json as _json
+    estudios = estudios_raw if isinstance(estudios_raw, list) else (_json.loads(estudios_raw) if estudios_raw else [])
+
+    tipo_label = ORDEN_TIPOS.get(tipo_orden, "Orden médica")
+    colores    = ORDEN_COLORES.get(tipo_orden, ORDEN_COLORES["laboratorio"])
+    prio_col   = ORDEN_PRIORIDAD_COLORS.get(prioridad, ORDEN_PRIORIDAD_COLORS["Normal"])
+    color      = colores["color"]
+    color_light = colores["light"]
+    color_border = colores["border"]
+
+    ar_tz = ZoneInfo("America/Argentina/Buenos_Aires")
+    if creado_en and hasattr(creado_en, "astimezone"):
+        creado_en = creado_en.astimezone(ar_tz)
+    elif creado_en and isinstance(creado_en, str):
+        try:
+            from datetime import datetime as _dt
+            creado_en = _dt.fromisoformat(creado_en).astimezone(ar_tz)
+        except Exception:
+            pass
+    fecha_emision       = creado_en.strftime("%d/%m/%Y")       if creado_en and hasattr(creado_en, "strftime") else "—"
+    fecha_emision_larga = creado_en.strftime("%d/%m/%Y %H:%M") if creado_en and hasattr(creado_en, "strftime") else "—"
+    paciente_nombre = f"{escape(pac_apellido.upper())}, {escape(pac_nombre)}"
+    paciente_documento = f"{escape(tipo_doc)} {escape(nro_doc)}"
+    esp_label = (especialidad or tipo_med or "Médico/a").title()
+    mat_label = escape(matricula or "—")
+    obra_label = escape(obra_social or "—")
+    firma_bloque = (f'<img src="{firma_url}" class="firma-img" alt="Firma">' if firma_url else '<div class="firma-linea"></div>')
+    logo_src = "https://res.cloudinary.com/dqsacd9ez/image/upload/v1757197807/logo_1_svfdye.png"
+
+    def _svg_icon(tipo: str, color: str, size: int = 26) -> str:
+        s = f'stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
+        b = f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" {s}>'
+        if tipo == "laboratorio":
+            p = '<path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>'
+        elif tipo == "imagenes":
+            p = '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/>'
+        else:
+            p = '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>'
+        return f'{b}{p}</svg>'
+    icono_svg = _svg_icon(tipo_orden, color)
+
+    barcode_uri = _barcode_data_uri(cuir or "")
+    barcode_html = (
+        f'<img src="{barcode_uri}" alt="Código de barras CUIR" style="max-width:200px;height:auto;" />'
+        if barcode_uri else ""
+    )
+
+    estudios_html = ""
+    for i, e in enumerate(estudios, 1):
+        nombre = escape(str(e.get("nombre", "")))
+        obs = escape(str(e.get("obs") or ""))
+        obs_html_item = f'<div class="est-obs">{obs}</div>' if obs else ""
+        estudios_html += f"""
+        <div class="est-item">
+          <span class="est-num" style="background:{color};color:#fff">{i}</span>
+          <div class="est-text">
+            <span class="est-nombre">{nombre}</span>
+            {obs_html_item}
+          </div>
+        </div>"""
+
+    cie10_badge = (
+        f'<span class="badge-cie" style="background:{color_light};color:{color};border:1px solid {color_border}">CIE-10: {escape(cie10)}</span>'
+        if cie10 else ""
+    )
+    indicaciones_html = (
+        f'<div class="indicaciones-box" style="border-left:3px solid {color};background:{color_light}">'
+        f'<strong style="color:{color}">Indicaciones para el paciente:</strong><br>{escape(indicaciones)}</div>'
+        if indicaciones else ""
+    )
+    prio_badge = (
+        f'<span class="prio-badge" style="background:{prio_col["bg"]};color:{prio_col["color"]};border:1px solid {prio_col["color"]}">⚡ {escape(prioridad)}</span>'
+        if prioridad != "Normal" else
+        f'<span class="prio-badge" style="background:{prio_col["bg"]};color:{prio_col["color"]};border:1px solid {prio_col["color"]}">{escape(prioridad)}</span>'
+    )
+
+    base = os.getenv("API_BASE_URL", "https://docya-railway-production.up.railway.app")
+    ver_url = f"{base}/recetario/ordenes/verificar/{uuid_orden}"
+    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=110x110&data={ver_url}"
+
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{escape(tipo_label)} — DocYa</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0;}}
+:root{{
+  --color:{color};
+  --light:{color_light};
+  --border:{color_border};
+  --ink:#0f172a;
+  --muted:#64748b;
+  --line:#dbe4ea;
+  --soft:#f8fafc;
+}}
+body{{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:var(--ink);background:#e2e8f0;-webkit-font-smoothing:antialiased;}}
+@media print{{
+  body{{background:#fff;}}
+  .no-print{{display:none!important;}}
+  .page{{box-shadow:none;margin:0;border-radius:0;}}
+  @page{{margin:12mm;size:A4;}}
+}}
+.no-print{{
+  position:sticky;top:0;z-index:20;
+  background:#1e293b;padding:9px 16px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}}
+.no-print button{{background:var(--color);color:#fff;border:none;padding:6px 20px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;}}
+.no-print span{{color:#94a3b8;font-size:12px;}}
+.page{{
+  background:#fff;max-width:210mm;min-height:297mm;
+  margin:16px auto;padding:34px 40px 30px;
+  box-shadow:0 4px 28px rgba(0,0,0,0.14);border-radius:14px;
+  display:flex;flex-direction:column;overflow:hidden;
+}}
+.header{{
+  display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start;
+  border-bottom:3px solid var(--color);padding-bottom:16px;margin-bottom:22px;
+}}
+.logo-wrap{{display:flex;align-items:center;gap:14px;}}
+.logo{{height:46px;}}
+.brand-copy{{display:flex;flex-direction:column;gap:5px;}}
+.eyebrow{{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}}
+.brand-copy strong{{font-size:22px;color:var(--ink);letter-spacing:-.03em;}}
+.brand-copy span{{color:var(--muted);font-size:12px;}}
+.header-right{{
+  min-width:180px;text-align:right;background:linear-gradient(180deg,var(--light),#fff);
+  border:1px solid rgba(0,0,0,0.08);border-radius:14px;padding:14px 16px;
+  font-size:11px;color:var(--muted);line-height:1.8;
+}}
+.header-right strong{{color:var(--ink);}}
+.tipo-banner{{
+  display:flex;align-items:center;gap:12px;
+  background:var(--light);border:1.5px solid var(--border);
+  border-radius:10px;padding:14px 18px;margin-bottom:20px;
+}}
+.tipo-icon{{font-size:26px;}}
+.tipo-info strong{{font-size:15px;font-weight:700;color:var(--color);display:block;}}
+.tipo-info span{{font-size:11px;color:var(--muted);}}
+.section-title{{
+  font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--muted);margin:20px 0 10px;padding-bottom:6px;
+  border-bottom:1px solid var(--line);
+}}
+.info-grid{{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:16px;}}
+.info-row{{font-size:12px;line-height:1.7;}}
+.info-row span{{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:block;}}
+.est-item{{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:9px 12px;border-bottom:1px solid var(--line);
+}}
+.est-item:last-child{{border-bottom:none;}}
+.est-num{{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;
+}}
+.est-text{{flex:1;}}
+.est-nombre{{font-size:13px;font-weight:500;color:var(--ink);}}
+.est-obs{{font-size:11px;color:var(--muted);font-style:italic;margin-top:2px;}}
+.estudios-box{{
+  border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;
+}}
+.diag-box{{
+  background:var(--soft);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;margin-bottom:12px;font-size:13px;line-height:1.65;
+}}
+.badge-cie{{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:11px;font-weight:600;font-family:monospace;margin-bottom:10px;
+}}
+.prio-badge{{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:11px;font-weight:600;margin-left:8px;
+}}
+.indicaciones-box{{
+  border-radius:8px;padding:10px 14px;margin-bottom:16px;
+  font-size:12px;line-height:1.6;color:#1e293b;
+}}
+.footer-sig{{
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;
+  margin-top:auto;padding-top:24px;border-top:1px solid var(--line);
+}}
+.sig-block{{text-align:center;}}
+.firma-img{{max-height:50px;max-width:180px;object-fit:contain;display:block;margin:0 auto 4px;}}
+.firma-linea{{height:1px;background:var(--line);margin-bottom:4px;}}
+.sig-label{{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;}}
+.sig-name{{font-size:12px;font-weight:600;color:var(--ink);margin-top:2px;}}
+.sig-mat{{font-size:11px;color:var(--muted);}}
+.barcode-wrap{{text-align:center;margin-top:10px;}}
+.legend{{
+  font-size:9.5px;color:var(--muted);text-align:center;margin-top:18px;
+  line-height:1.5;border-top:1px solid var(--line);padding-top:10px;
+}}
+</style>
+</head>
+<body>
+<div class="no-print">
+  <button onclick="window.print()">⎙ Imprimir / Guardar PDF</button>
+  <span>DocYa · {escape(tipo_label)}</span>
+</div>
+
+<div class="page">
+
+  <!-- Encabezado -->
+  <div class="header">
+    <div class="logo-wrap">
+      <img src="{logo_src}" alt="DocYa" class="logo" />
+      <div class="brand-copy">
+        <span class="eyebrow">Documento médico digital</span>
+        <strong>DocYa</strong>
+        <span>docya.com.ar</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <strong>N.º de emisión</strong><br>
+      ORD-{oid:06d}<br>
+      <strong>Fecha</strong><br>
+      {fecha_emision_larga}<br>
+      <strong>CUIR</strong><br>
+      <span style="font-size:9px;word-break:break-all;">{escape(cuir or '—')}</span>
+    </div>
+  </div>
+
+  <!-- Banner tipo -->
+  <div class="tipo-banner">
+    <div class="tipo-icon" style="display:flex;align-items:center;">{icono_svg}</div>
+    <div class="tipo-info">
+      <strong>{escape(tipo_label)}</strong>
+      <span>Emitido el {fecha_emision_larga} · {prio_badge}</span>
+    </div>
+  </div>
+
+  <!-- Médico -->
+  <div class="section-title">Profesional solicitante</div>
+  <div class="info-grid">
+    <div class="info-row"><span>Nombre</span>{escape(med_nombre)}</div>
+    <div class="info-row"><span>Especialidad</span>{escape(esp_label)}</div>
+    <div class="info-row"><span>Matrícula</span>{mat_label}</div>
+    <div class="info-row"><span>Fecha de emisión</span>{fecha_emision_larga}</div>
+  </div>
+
+  <!-- Paciente -->
+  <div class="section-title">Datos del paciente</div>
+  <div class="info-grid">
+    <div class="info-row"><span>Apellido y nombre</span>{paciente_nombre}</div>
+    <div class="info-row"><span>Documento</span>{paciente_documento}</div>
+    <div class="info-row"><span>Obra social</span>{obra_label}</div>
+  </div>
+
+  <!-- Diagnóstico -->
+  <div class="section-title">Diagnóstico {cie10_badge}</div>
+  <div class="diag-box">{escape(diagnostico)}</div>
+  {indicaciones_html}
+
+  <!-- Estudios / Derivaciones -->
+  <div class="section-title">{escape(tipo_label)} ({len(estudios)} ítem{'s' if len(estudios)!=1 else ''})</div>
+  <div class="estudios-box">
+    {estudios_html}
+  </div>
+
+  <!-- Pie: firma + barcode + QR -->
+  <div class="footer-sig">
+    <div class="sig-block">
+      {firma_bloque}
+      <div class="sig-label">Firma y sello del profesional</div>
+      <div class="sig-name">{escape(med_nombre)}</div>
+      <div class="sig-mat">Mat. {mat_label} · {escape(esp_label)}</div>
+    </div>
+    <div class="sig-block">
+      {barcode_html}
+      <div class="sig-label" style="margin-top:8px;">Verificación</div>
+      <img src="{qr_url}" alt="QR verificación" style="width:80px;height:80px;margin:4px auto;display:block;" />
+      <div style="font-size:9px;color:var(--muted);">Escanear para verificar</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    El profesional certifica que la información contenida en este documento es verídica.
+    Documento generado digitalmente por DocYa · docya.com.ar · CUIR: {escape(cuir or '—')}
+  </div>
+
+</div>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
+
+
+@router.get("/ordenes/verificar/{uuid_orden}", response_class=HTMLResponse)
+def verificar_orden(uuid_orden: str, db=Depends(get_db)):
+    """Verificación pública de una orden médica (sin auth). Accesible desde el QR."""
+    _ensure_recetario_ordenes_schema(db)
+    cur = db.cursor()
+    cur.execute("""
+        SELECT o.uuid, o.cuir, o.tipo_orden, o.estado, o.diagnostico, o.prioridad, o.creado_en,
+               p.nombre, p.apellido,
+               m.full_name, m.matricula, m.especialidad, m.tipo
+        FROM recetario_ordenes o
+        JOIN recetario_pacientes p ON p.id = o.paciente_id
+        JOIN medicos             m ON m.id = o.medico_id
+        WHERE o.uuid = %s
+    """, (uuid_orden,))
+    row = cur.fetchone()
+    if not row:
+        return HTMLResponse(_html_no_encontrada(uuid_orden), status_code=404)
+
+    uuid_val, cuir, tipo_orden, estado, diagnostico, prioridad, creado_en, \
+        pac_nombre, pac_apellido, med_nombre, matricula, especialidad, tipo_med = row
+
+    tipo_label = ORDEN_TIPOS.get(tipo_orden, "Orden médica")
+    colores    = ORDEN_COLORES.get(tipo_orden, ORDEN_COLORES["laboratorio"])
+    color      = colores["color"]
+    color_light = colores["light"]
+    icon_map   = {"laboratorio": "🧪", "imagenes": "🩻", "derivacion": "👨‍⚕️"}
+    icono      = icon_map.get(tipo_orden, "📋")
+    es_valida  = estado == "valida"
+    fecha_str  = creado_en.strftime("%d/%m/%Y %H:%M") if creado_en else "—"
+    esp_label  = (especialidad or tipo_med or "Médico/a").title()
+
+    estado_color = color if es_valida else "#dc2626"
+    estado_bg    = color_light if es_valida else "#fef2f2"
+    estado_text  = "✓ ORDEN VÁLIDA" if es_valida else "✗ ORDEN ANULADA"
+
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verificación de orden — DocYa</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0;}}
+body{{font-family:Arial,Helvetica,sans-serif;background:#f1f5f9;color:#0f172a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}}
+.card{{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.12);max-width:480px;width:100%;overflow:hidden;}}
+.top{{background:{color};padding:28px 28px 20px;text-align:center;}}
+.top .icon{{font-size:2.5rem;margin-bottom:8px;}}
+.top h1{{color:#fff;font-size:1.1rem;font-weight:700;letter-spacing:.05em;}}
+.top p{{color:rgba(255,255,255,0.8);font-size:0.82rem;margin-top:4px;}}
+.estado{{margin:20px 24px 0;padding:12px 16px;border-radius:10px;background:{estado_bg};border:1.5px solid {estado_color};text-align:center;font-weight:700;font-size:0.95rem;color:{estado_color};letter-spacing:.05em;}}
+.body{{padding:24px;}}
+.row{{display:flex;flex-direction:column;gap:4px;margin-bottom:16px;}}
+.row span{{font-size:0.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#64748b;}}
+.row strong{{font-size:0.95rem;color:#0f172a;}}
+.cuir{{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-family:monospace;font-size:0.8rem;color:#475569;word-break:break-all;margin-bottom:16px;}}
+.footer{{text-align:center;padding:16px 24px 24px;border-top:1px solid #f1f5f9;font-size:0.75rem;color:#94a3b8;}}
+.logo{{font-weight:700;color:{color};}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top">
+    <div class="icon">{icono}</div>
+    <h1>{escape(tipo_label)}</h1>
+    <p>Verificación de documento — DocYa</p>
+  </div>
+
+  <div class="estado">{estado_text}</div>
+
+  <div class="body">
+    <div class="row"><span>Paciente</span><strong>{escape(pac_apellido)}, {escape(pac_nombre)}</strong></div>
+    <div class="row"><span>Profesional</span><strong>{escape(med_nombre)}</strong></div>
+    <div class="row"><span>Especialidad</span><strong>{escape(esp_label)}</strong></div>
+    <div class="row"><span>Matrícula</span><strong>{escape(matricula or '—')}</strong></div>
+    <div class="row"><span>Fecha de emisión</span><strong>{fecha_str}</strong></div>
+    <div class="row"><span>Prioridad</span><strong>{escape(prioridad)}</strong></div>
+    <div class="row"><span>Diagnóstico</span><strong>{escape(diagnostico or '—')}</strong></div>
+    <div class="row"><span>CUIR</span></div>
+    <div class="cuir">{escape(cuir or '—')}</div>
+  </div>
+
+  <div class="footer">
+    Documento emitido digitalmente por <span class="logo">DocYa</span> · docya.com.ar
+  </div>
+</div>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
+
+
 def _html_no_encontrada(uuid_receta: str):
     return f"""<!DOCTYPE html>
 <html lang="es">

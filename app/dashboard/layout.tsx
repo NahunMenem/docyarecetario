@@ -9,6 +9,7 @@ import {
   FilePlus2,
   ClipboardList,
   FileCheck2,
+  ClipboardPlus,
   Sun,
   Moon,
   LogOut,
@@ -22,6 +23,7 @@ const NAV_LINKS = [
   { href: "/dashboard/nueva-receta", label: "Nueva Receta",  Icon: FilePlus2 },
   { href: "/dashboard/historial",    label: "Historial",     Icon: ClipboardList },
   { href: "/dashboard/certificados", label: "Certificados",  Icon: FileCheck2 },
+  { href: "/dashboard/ordenes",      label: "Órdenes",       Icon: ClipboardPlus },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
