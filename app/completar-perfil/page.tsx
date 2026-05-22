@@ -11,7 +11,6 @@ import {
   FileBadge2,
   Home,
   IdCard,
-  MapPin,
   PenLine,
   Phone,
   ScanFace,
@@ -339,7 +338,7 @@ export default function CompletarPerfilPage() {
     const initAutocomplete = () => {
       if (cancelled || autocompleteRef.current || !addressInputRef.current) return;
 
-      const g = (window as Window & { google?: any }).google;
+      const g = (window as Window & { google?: typeof google }).google;
       const AutocompleteCtor = g?.maps?.places?.Autocomplete;
 
       if (!AutocompleteCtor) {

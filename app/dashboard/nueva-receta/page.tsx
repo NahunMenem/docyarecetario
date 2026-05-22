@@ -491,7 +491,7 @@ export default function NuevaRecetaPage() {
             </button>
           </div>
           <p style={{ color:"var(--text-muted)", fontSize:"0.78rem", textAlign:"center" }}>
-            "Firmar y Emitir" guarda la receta en el servidor y genera el documento oficial con QR verificable.
+            &quot;Firmar y Emitir&quot; guarda la receta en el servidor y genera el documento oficial con QR verificable.
           </p>
         </div>
       )}

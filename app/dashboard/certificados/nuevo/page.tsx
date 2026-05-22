@@ -115,7 +115,8 @@ function renderField(field: CertField, value: string, onChange: (v: string) => v
   return <input style={inp} type={field.type ?? "text"} placeholder={field.placeholder} value={value} onChange={(e) => onChange(e.target.value)} onFocus={focusOn} onBlur={focusOff} />;
 }
 
-export function PreviewCertificado({ template, paciente, campos }: { template: CertTemplate; paciente?: Paciente; campos: Record<string, string> }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function PreviewCertificado({ template, paciente, campos }: { template: CertTemplate; paciente?: Paciente; campos: Record<string, string> }) {
   const nombre   = paciente ? `${paciente.nombre} ${paciente.apellido}` : "Nombre y apellido";
   const dni      = paciente?.nro_documento ?? "00.000.000";
   const edad     = (() => {
