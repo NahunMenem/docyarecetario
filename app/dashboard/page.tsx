@@ -11,6 +11,7 @@ import {
   FilePlus2,
   ClipboardList,
   FileCheck2,
+  FileText,
   ChevronRight,
   UserRound,
   Mail,
@@ -100,6 +101,7 @@ export default function DashboardPage() {
     { href: "/dashboard/nueva-receta", Icon: FilePlus2,     title: "Nueva Receta",   desc: "Emitir receta electrónica con firma digital y QR",             color: "#60a5fa" },
     { href: "/dashboard/historial",    Icon: ClipboardList, title: "Historial",      desc: "Revisá todas las recetas emitidas, descargalas o anulalas",    color: "#a78bfa" },
     { href: "/dashboard/certificados", Icon: FileCheck2,    title: "Certificados",   desc: "Emitir certificados médicos con firma digital y código QR",    color: "#34d399" },
+    { href: "/dashboard/ordenes",      Icon: FileText,      title: "Órdenes",        desc: "Emitir órdenes de laboratorio e imágenes con firma digital",   color: "#f97316" },
   ];
 
   const profileFields = [
