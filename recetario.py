@@ -24,6 +24,8 @@ import os
 import random
 import re
 import time
+import urllib.request
+import urllib.error
 import jwt
 import psycopg2
 from datetime import datetime
@@ -41,6 +43,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 JWT_SECRET   = os.getenv("JWT_SECRET", "change_me")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://docya-railway-production.up.railway.app")
 LOGGER = logging.getLogger("docya.recetario")
 
 router = APIRouter(prefix="/recetario", tags=["Recetario"])
@@ -523,6 +526,59 @@ def _send_prescription_to_farmalink_task(receta_id: int) -> None:
 
 
 # ====================================================
+# 🔔 NOTIFICACIÓN PUSH — certificado a paciente
+# ====================================================
+_CERT_TIPO_LABEL: dict[str, str] = {
+    "ausentismo_laboral":    "ausentismo laboral",
+    "ausentismo_escolar":    "ausentismo escolar",
+    "constancia_asistencia": "constancia de asistencia",
+    "reposo_domiciliario":   "reposo domiciliario",
+}
+
+def _notificar_paciente_certificado_task(paciente_id: int, cert_id: int, tipo_certificado: str) -> None:
+    """Background task: busca el FCM token del paciente y avisa al backend principal para que envíe el push."""
+    try:
+        conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT p.paciente_uuid, p.email, p.nro_documento, m.full_name
+            FROM recetario_pacientes p
+            JOIN medicos m ON m.id = p.medico_id
+            WHERE p.id = %s
+        """, (paciente_id,))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return
+        paciente_uuid, email, nro_documento, medico_nombre = row
+
+        tipo_label = _CERT_TIPO_LABEL.get(tipo_certificado, tipo_certificado.replace("_", " "))
+        body = json.dumps({
+            "paciente_uuid":   str(paciente_uuid) if paciente_uuid else None,
+            "email":           email,
+            "nro_documento":   nro_documento,
+            "cert_id":         cert_id,
+            "tipo_certificado": tipo_certificado,
+            "tipo_label":      tipo_label,
+            "medico_nombre":   medico_nombre or "Tu médico",
+        }, ensure_ascii=False).encode("utf-8")
+
+        req = urllib.request.Request(
+            f"{API_BASE_URL}/interno/certificado-push",
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "X-Internal-Token": JWT_SECRET,
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5):
+            pass
+    except Exception:
+        LOGGER.exception("Error enviando notificación push de certificado %s", cert_id)
+
+
+# ====================================================
 # 👤 PACIENTES
 # ====================================================
 
@@ -944,6 +1000,7 @@ class CertificadoIn(BaseModel):
 @router.post("/certificados", status_code=201)
 def emitir_certificado(
     data: CertificadoIn,
+    background_tasks: BackgroundTasks,
     medico_id: int = Depends(get_medico_id),
     db=Depends(get_db)
 ):
@@ -976,6 +1033,12 @@ def emitir_certificado(
     ))
     row = cur.fetchone()
     db.commit()
+    background_tasks.add_task(
+        _notificar_paciente_certificado_task,
+        data.paciente_id,
+        row[0],
+        data.tipo_certificado,
+    )
     return {"id": row[0], "creado_en": str(row[1]),
             "url_html": f"/recetario/certificados/{row[0]}/html"}
 
