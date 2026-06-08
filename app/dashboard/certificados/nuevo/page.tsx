@@ -37,6 +37,7 @@ const templates: CertTemplate[] = [
       { key: "dias_indicados", label: "Días indicados", placeholder: "3", type: "number", required: true },
       { key: "fecha_inicio", label: "Fecha inicio", placeholder: "", type: "date", required: true },
       { key: "fecha_fin", label: "Fecha fin", placeholder: "", type: "date", required: true },
+      { key: "tratamiento_indicacion", label: "Tratamiento e indicacion de reposo laboral", placeholder: "Reposo laboral indicado, tratamiento y aclaraciones clinicas", type: "textarea", required: true },
     ],
   },
   {
@@ -51,7 +52,7 @@ const templates: CertTemplate[] = [
     ],
   },
   {
-    id: "constancia_asistencia", label: "Constancia de asistencia", desc: "Acredita concurrencia a consulta médica",
+    id: "constancia_asistencia", label: "Constancia de Atención", desc: "Acredita concurrencia a consulta médica",
     icon: Stethoscope, accent: "#22c55e",
     fields: [
       { key: "fecha_asistencia", label: "Fecha de asistencia", placeholder: "", type: "date", required: true },
@@ -68,7 +69,7 @@ const templates: CertTemplate[] = [
       { key: "dias_indicados", label: "Días indicados", placeholder: "4", type: "number", required: true },
       { key: "fecha_inicio", label: "Fecha inicio", placeholder: "", type: "date", required: true },
       { key: "fecha_fin", label: "Fecha fin", placeholder: "", type: "date", required: true },
-      { key: "indicaciones_adicionales", label: "Indicaciones adicionales", placeholder: "Hidratación, control, medicación...", type: "textarea" },
+      { key: "tratamiento_indicacion", label: "Tratamiento e indicacion de reposo", placeholder: "Reposo, tratamiento indicado, signos de alarma y control", type: "textarea", required: true },
     ],
   },
 ];
@@ -137,6 +138,7 @@ function PreviewCertificado({ template, paciente, campos }: { template: CertTemp
     <>
       <p style={p}><span style={strong}>CERTIFICO</span> que el/la Sr./Sra. <span style={muted}>{nombre}</span>, de <span style={muted}>{edad}</span> años, DNI <span style={muted}>{dni}</span>.</p>
       <p style={{ ...p, marginTop: 10 }}>Se indica <span style={muted}>{campos.dias_indicados || "Nro."}</span> días de <span style={muted}>{campos.tipo_indicacion || "tipo de indicación"}</span>, con inicio el <span style={muted}>{campos.fecha_inicio || "dd/mm/aaaa"}</span> y alta el <span style={muted}>{campos.fecha_fin || "dd/mm/aaaa"}</span>.</p>
+      <p style={{ ...p, marginTop: 10 }}>Tratamiento e indicacion de reposo laboral: <span style={muted}>{campos.tratamiento_indicacion || "tratamiento, dias y aclaraciones clinicas"}</span>.</p>
     </>
   );
 
@@ -155,6 +157,7 @@ function PreviewCertificado({ template, paciente, campos }: { template: CertTemp
     <>
       <p style={p}><span style={strong}>CERTIFICO Y PRESCRIBO</span> que el/la Sr./Sra. <span style={muted}>{nombre}</span>, de <span style={muted}>{edad}</span> años, DNI <span style={muted}>{dni}</span>, requiere reposo.</p>
       <p style={{ ...p, marginTop: 10 }}>Reposo domiciliario <span style={muted}>{campos.tipo_reposo || "absoluto"}</span> por <span style={muted}>{campos.dias_indicados || "XX"}</span> días, desde el <span style={muted}>{campos.fecha_inicio || "dd/mm/aaaa"}</span> hasta el <span style={muted}>{campos.fecha_fin || "dd/mm/aaaa"}</span>.</p>
+      <p style={{ ...p, marginTop: 10 }}>Tratamiento e indicacion de reposo: <span style={muted}>{campos.tratamiento_indicacion || "tratamiento, signos de alarma y control"}</span>.</p>
     </>
   );
 }

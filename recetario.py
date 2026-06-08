@@ -128,7 +128,7 @@ class AnularIn(BaseModel):
 CERTIFICADO_TIPOS = {
     "ausentismo_laboral": "Ausentismo laboral",
     "ausentismo_escolar": "Ausentismo escolar",
-    "constancia_asistencia": "Constancia de asistencia",
+    "constancia_asistencia": "Constancia de Atención",
     "reposo_domiciliario": "Reposo domiciliario",
 }
 
@@ -204,6 +204,19 @@ def _valor_campo(campos: Dict[str, Any], key: str, default: str = "—") -> str:
     return text if text else default
 
 
+def _texto_reposo_laboral(campos: Dict[str, Any], default: str = "—") -> str:
+    for key in (
+        "indicacion_reposo_laboral",
+        "tratamiento_indicacion",
+        "tratamiento",
+        "indicaciones_adicionales",
+    ):
+        value = str(campos.get(key) or "").strip()
+        if value:
+            return value
+    return default
+
+
 def _render_certificado_body(
     *,
     tipo_certificado: str,
@@ -236,6 +249,7 @@ def _render_certificado_body(
     <div class="doc-box">{diagnostico_html}</div>
     <div class="doc-section-title">INDICACIÓN MÉDICA</div>
     <p class="doc-copy">Por lo expuesto, se indica <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</span> días de <span class="doc-fill">{escape(_valor_campo(campos, 'tipo_indicacion', 'Ausencia laboral justificada'))}</span>, con fecha de inicio el <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_inicio'))}</span> y alta estimada el <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_fin'))}</span>.</p>
+    <p class="doc-copy">Tratamiento e indicación de reposo laboral: <span class="doc-fill">{escape(_texto_reposo_laboral(campos, 'Sin indicación adicional consignada'))}</span>.</p>
     <p class="doc-copy">El presente certificado se extiende a solicitud del/la interesado/a para ser presentado ante <span class="doc-fill">{escape(_valor_campo(campos, 'presentar_ante'))}</span>.</p>
   </div>"""
 
@@ -282,8 +296,8 @@ def _render_certificado_body(
     <div class="doc-box">{diagnostico_html}</div>
     <div class="doc-section-title">INDICACIÓN</div>
     <p class="doc-copy">Reposo domiciliario <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'tipo_reposo', 'relativo'))}</span> por <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'dias_indicados', str(reposo_dias or '—')))}</span> días, desde el <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_inicio'))}</span> hasta el <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_fin'))}</span>.</p>
-    <div class="doc-label">INDICACIONES ADICIONALES</div>
-    <div class="doc-box">{escape(_valor_campo(campos, 'indicaciones_adicionales', 'Sin indicaciones adicionales'))}</div>
+    <div class="doc-label">TRATAMIENTO E INDICACIÓN DE REPOSO</div>
+    <div class="doc-box">{escape(_texto_reposo_laboral(campos, 'Sin indicaciones adicionales'))}</div>
   </div>"""
 
 
@@ -531,7 +545,7 @@ def _send_prescription_to_farmalink_task(receta_id: int) -> None:
 _CERT_TIPO_LABEL: dict[str, str] = {
     "ausentismo_laboral":    "ausentismo laboral",
     "ausentismo_escolar":    "ausentismo escolar",
-    "constancia_asistencia": "constancia de asistencia",
+    "constancia_asistencia": "constancia de atención",
     "reposo_domiciliario":   "reposo domiciliario",
 }
 
@@ -1008,6 +1022,7 @@ def emitir_certificado(
     _ensure_recetario_certificados_schema(db)
     if data.tipo_certificado not in CERTIFICADO_TIPOS:
         raise HTTPException(400, f"tipo_certificado inválido. Opciones: {list(CERTIFICADO_TIPOS.keys())}")
+    campos = data.campos or {}
     cur = db.cursor()
     # Verificar que el paciente pertenece al médico
     cur.execute("""
@@ -1029,7 +1044,7 @@ def emitir_certificado(
         data.diagnostico,
         data.reposo_dias,
         data.observaciones,
-        json.dumps(data.campos or {}, ensure_ascii=False),
+        json.dumps(campos, ensure_ascii=False),
     ))
     row = cur.fetchone()
     db.commit()
