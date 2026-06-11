@@ -12,7 +12,7 @@ import { listarCertificados, type CertificadoResumen } from "@/lib/api";
 const templates = [
   { id: "ausentismo_laboral",   label: "Ausentismo laboral",       desc: "Justificación para trabajo, empresa u organismo",                    icon: BriefcaseBusiness, accent: "#14b8a6" },
   { id: "ausentismo_escolar",   label: "Ausentismo escolar",       desc: "Justificación de inasistencia para institución educativa",           icon: School,            accent: "#0ea5e9" },
-  { id: "constancia_asistencia",label: "Constancia de asistencia", desc: "Acredita concurrencia a consulta sin exponer datos clínicos de más", icon: Stethoscope,       accent: "#22c55e" },
+  { id: "constancia_asistencia",label: "Constancia de Atención", desc: "Acredita atención médica sin exponer datos clínicos de más", icon: Stethoscope,       accent: "#22c55e" },
   { id: "reposo_domiciliario",  label: "Reposo domiciliario",      desc: "Indicación formal de reposo con período e indicaciones",             icon: House,             accent: "#f59e0b" },
 ];
 
@@ -102,7 +102,7 @@ export default function CertificadosPage() {
           </div>
           <h3 style={{ fontWeight: 700, marginBottom: "0.5rem", color: "var(--text-main)" }}>Todavía no emitiste certificados</h3>
           <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
-            Podés emitir ausentismo laboral, escolar, constancia de asistencia y reposo domiciliario.
+            Podés emitir ausentismo laboral, escolar, constancia de atención y reposo domiciliario.
           </p>
           <button className="btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }} onClick={() => router.push("/dashboard/certificados/nuevo")}>
             <Plus size={15} strokeWidth={2.5} /> Emitir primer certificado

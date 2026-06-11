@@ -52,10 +52,10 @@ const templates: CertTemplate[] = [
     ],
   },
   {
-    id: "constancia_asistencia", label: "Constancia de Atención", desc: "Acredita concurrencia a consulta médica",
+    id: "constancia_asistencia", label: "Constancia de Atención", desc: "Acredita atención en consulta médica",
     icon: Stethoscope, accent: "#22c55e",
     fields: [
-      { key: "fecha_asistencia", label: "Fecha de asistencia", placeholder: "", type: "date", required: true },
+      { key: "fecha_asistencia", label: "Fecha de atención", placeholder: "", type: "date", required: true },
       { key: "hora_asistencia", label: "Hora", placeholder: "", type: "time", required: true },
       { key: "duracion_minutos", label: "Duración en minutos", placeholder: "30", type: "number", required: true },
       { key: "motivo_consulta", label: "Motivo de consulta", placeholder: "Control clínico / seguimiento / síntomas", required: true },
@@ -150,7 +150,7 @@ function PreviewCertificado({ template, paciente, campos }: { template: CertTemp
   );
 
   if (template.id === "constancia_asistencia") return (
-    <p style={p}><span style={strong}>HAGO CONSTAR</span> que el/la Sr./Sra. <span style={muted}>{nombre}</span>, de <span style={muted}>{edad}</span> años, DNI <span style={muted}>{dni}</span>, concurrió a consulta médica el <span style={muted}>{campos.fecha_asistencia || "dd/mm/aaaa"}</span> a las <span style={muted}>{campos.hora_asistencia || "HH:MM"}</span> hs, con una duración de <span style={muted}>{campos.duracion_minutos || "XX"}</span> minutos.</p>
+    <p style={p}><span style={strong}>HAGO CONSTAR</span> que el/la Sr./Sra. <span style={muted}>{nombre}</span>, de <span style={muted}>{edad}</span> años, DNI <span style={muted}>{dni}</span>, fue atendido/a en consulta médica el <span style={muted}>{campos.fecha_asistencia || "dd/mm/aaaa"}</span> a las <span style={muted}>{campos.hora_asistencia || "HH:MM"}</span> hs, con una duración de <span style={muted}>{campos.duracion_minutos || "XX"}</span> minutos.</p>
   );
 
   return (

@@ -275,10 +275,10 @@ def _render_certificado_body(
   <div class="doc-body">
     <div class="doc-title-row">
       <span class="doc-title-line"></span>
-      <div class="doc-title-text">CONSTANCIA DE ASISTENCIA MÉDICA</div>
+      <div class="doc-title-text">CONSTANCIA DE ATENCIÓN MÉDICA</div>
       <span class="doc-title-line"></span>
     </div>
-    <p class="doc-copy"><strong>HAGO CONSTAR</strong> que el/la Sr./Sra. <span class="doc-fill">{paciente}</span>, de <span class="doc-fill doc-fill-short">{edad_txt}</span> años, DNI Nro. <span class="doc-fill">{documento}</span>, concurrió a consulta médica el día <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_asistencia', fecha_emision.split(' ')[0]))}</span> a las <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'hora_asistencia'))}</span> horas, con una duración aproximada de <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'duracion_minutos'))}</span> minutos.</p>
+    <p class="doc-copy"><strong>HAGO CONSTAR</strong> que el/la Sr./Sra. <span class="doc-fill">{paciente}</span>, de <span class="doc-fill doc-fill-short">{edad_txt}</span> años, DNI Nro. <span class="doc-fill">{documento}</span>, fue atendido/a en consulta médica el día <span class="doc-fill">{escape(_valor_campo(campos, 'fecha_asistencia', fecha_emision.split(' ')[0]))}</span> a las <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'hora_asistencia'))}</span> horas, con una duración aproximada de <span class="doc-fill doc-fill-short">{escape(_valor_campo(campos, 'duracion_minutos'))}</span> minutos.</p>
     <p class="doc-copy">Motivo de la consulta: <span class="doc-fill">{escape(_valor_campo(campos, 'motivo_consulta', diagnostico or 'Consulta médica general'))}</span>.</p>
     <p class="doc-copy">El presente se extiende a pedido del/la interesado/a, sin que ello implique revelar el diagnóstico, en cumplimiento del secreto médico profesional.</p>
   </div>"""
