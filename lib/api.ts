@@ -209,6 +209,24 @@ export async function buscarPorPrincipioActivo(nombre: string): Promise<Medicame
   return data.resultados ?? [];
 }
 
+export interface DiagnosticoRcta {
+  iddiagnostico: number;
+  coddiagnostico: string;
+  descdiagnostico: string;
+}
+
+export async function buscarDiagnosticosRcta(text: string): Promise<DiagnosticoRcta[]> {
+  if (text.trim().length < 3) return [];
+  const token = getToken();
+  if (!token) return [];
+  const res = await fetch(`${BASE}/recetario/rcta/diagnosticos?text=${encodeURIComponent(text.trim())}`, {
+    headers: authHeaders(token),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || data.mensaje || "Error al buscar diagnósticos");
+  return data?.response?.diagnosticos ?? data?.diagnosticos ?? [];
+}
+
 // ── Recetario — Pacientes ─────────────────────────────────────────────────────
 
 export const TIPOS_DOCUMENTO = ["DNI", "CI", "Pasaporte", "LC", "LE"] as const;

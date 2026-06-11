@@ -6,6 +6,7 @@ import { getMedico, getToken, handleSessionExpired } from "@/lib/auth";
 import { listarPacientes, emitirReceta, type Paciente, type MedicamentoItem } from "@/lib/api";
 import { Medicamento } from "@/lib/api";
 import MedicamentoSearch from "@/components/MedicamentoSearch";
+import DiagnosticoSearch from "@/components/DiagnosticoSearch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface LineaReceta {
@@ -384,10 +385,10 @@ export default function NuevaRecetaPage() {
       {pacienteId && (
         <div className="glass-card">
           <div className="section-title">🩺 Diagnóstico</div>
-          <input style={inp} placeholder="ITS, HTA esencial, Diabetes tipo 2, J00 Rinofaringitis..."
+          <DiagnosticoSearch
             value={extras.diagnostico}
-            onChange={(e) => setExtras((ex) => ({ ...ex, diagnostico: e.target.value }))}
-            onFocus={focusOn} onBlur={focusOff} />
+            onChange={(diagnostico) => setExtras((ex) => ({ ...ex, diagnostico }))}
+          />
         </div>
       )}
 
