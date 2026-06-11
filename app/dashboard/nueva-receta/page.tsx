@@ -383,7 +383,7 @@ export default function NuevaRecetaPage() {
 
       {/* ── 2. Diagnóstico ── */}
       {pacienteId && (
-        <div className="glass-card">
+        <div className="glass-card" style={{ overflow: "visible", position: "relative", zIndex: 30 }}>
           <div className="section-title">🩺 Diagnóstico</div>
           <DiagnosticoSearch
             value={extras.diagnostico}
@@ -394,7 +394,7 @@ export default function NuevaRecetaPage() {
 
       {/* ── 3. Medicamentos ── */}
       {pacienteId && (
-        <div className="glass-card" style={{ overflow: "visible" }}>
+        <div className="glass-card" style={{ overflow: "visible", position: "relative", zIndex: 20 }}>
           <div className="section-title">💊 Agregar Medicamento</div>
           <MedicamentoSearch onSelect={agregarMedicamento} />
           <p style={{ color:"var(--text-muted)", fontSize:"0.8rem", marginTop:"0.75rem" }}>
