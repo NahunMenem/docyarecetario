@@ -26,6 +26,14 @@ function getNombreComercialSugerido(m: Medicamento) {
   return nombre && nombre.toLowerCase() !== ifa ? nombre : "";
 }
 
+function getRctaFinanciadorId(obraSocial: string) {
+  const normalized = obraSocial.trim().toLowerCase();
+  if (normalized.includes("osde")) return 28;
+  if (normalized.includes("accord")) return 96;
+  if (normalized.includes("luis pasteur") || normalized.includes("pasteur")) return 9;
+  return undefined;
+}
+
 function getFormaConcentracion(forma?: string | null, concentracion?: string | null) {
   return [forma, concentracion].filter(Boolean).join(" ").trim();
 }
@@ -234,17 +242,25 @@ export default function NuevaRecetaPage() {
         nombre: getIfaMedicamento(l.medicamento) || l.medicamento.nombre_comercial,
         ifa: getIfaMedicamento(l.medicamento) || undefined,
         nombre_comercial: getNombreComercialSugerido(l.medicamento) || undefined,
+        regNo: l.medicamento.regNo || l.medicamento.codigo_alfabeta || undefined,
+        nombreProducto: l.medicamento.nombreProducto || l.medicamento.nombre_comercial || undefined,
+        nombreDroga: l.medicamento.nombreDroga || getIfaMedicamento(l.medicamento) || undefined,
         forma_farmaceutica: l.medicamento.forma || undefined,
         concentracion: l.concentracion || undefined,
         presentacion: l.presentacion || undefined,
         cantidad: l.cantidad,
         indicaciones: l.indicaciones,
+        permiteSustitucion: "N",
+        tratamiento: 0,
+        posologia: l.indicaciones,
+        forzarDuplicado: Boolean(l.medicamento.requiereDuplicado),
       }));
       const res = await emitirReceta({
         paciente_id: pacienteId!,
         obra_social: extras.obra_social || undefined,
         plan: extras.plan || undefined,
         nro_credencial: extras.nro_credencial || undefined,
+        id_financiador: getRctaFinanciadorId(extras.obra_social),
         diagnostico: extras.diagnostico || undefined,
         medicamentos: meds,
       }, token);

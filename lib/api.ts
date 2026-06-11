@@ -1,3 +1,5 @@
+import { getToken } from "@/lib/auth";
+
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -127,6 +129,17 @@ export interface Medicamento {
   categoria: string | null;
   alertas: string[];
   codigo_alfabeta?: string | null;
+  regNo?: string | null;
+  nombreProducto?: string | null;
+  nombreDroga?: string | null;
+  tieneCobertura?: boolean;
+  requiereAprobacion?: boolean;
+  descuento?: number | null;
+  requiereDuplicado?: boolean;
+  hiv?: boolean;
+  psicofarmaco?: boolean;
+  estupefaciente?: boolean;
+  ventaControlada?: boolean;
   pvp_pami?: number | null;
   cobertura_pct?: number | null;
   importe_afiliado?: number | null;
@@ -136,6 +149,53 @@ export interface Medicamento {
 
 export async function buscarMedicamentos(q: string): Promise<Medicamento[]> {
   if (q.length < 2) return [];
+  const token = getToken();
+  if (token) {
+    try {
+      const rctaRes = await fetch(`${BASE}/recetario/rcta/medicamentos?q=${encodeURIComponent(q)}`, {
+        headers: authHeaders(token),
+      });
+      const rctaData = await rctaRes.json();
+      const medicamentos = rctaData?.response?.medicamentos ?? rctaData?.medicamentos;
+      if (rctaRes.ok && Array.isArray(medicamentos)) {
+        return medicamentos.map((m: Record<string, unknown>, idx: number) => ({
+          id: Number(m.regNo) || idx,
+          nombre_comercial: String(m.nombreProducto ?? ""),
+          principio_activo_str: String(m.nombreDroga ?? ""),
+          forma: null,
+          concentracion: null,
+          laboratorio: null,
+          presentacion: typeof m.presentacion === "string" ? m.presentacion : null,
+          requiere_receta: true,
+          categoria: null,
+          alertas: [
+            m.psicofarmaco ? "Psicofármaco" : "",
+            m.estupefaciente ? "Estupefaciente" : "",
+            m.ventaControlada ? "Venta controlada" : "",
+            m.hiv ? "HIV" : "",
+            m.requiereDuplicado ? "Requiere duplicado" : "",
+          ].filter(Boolean) as string[],
+          codigo_alfabeta: typeof m.regNo === "string" ? m.regNo : null,
+          regNo: typeof m.regNo === "string" ? m.regNo : null,
+          nombreProducto: typeof m.nombreProducto === "string" ? m.nombreProducto : null,
+          nombreDroga: typeof m.nombreDroga === "string" ? m.nombreDroga : null,
+          tieneCobertura: Boolean(m.tieneCobertura),
+          requiereAprobacion: Boolean(m.requiereAprobacion),
+          descuento: typeof m.descuento === "number" ? m.descuento : null,
+          requiereDuplicado: Boolean(m.requiereDuplicado),
+          hiv: Boolean(m.hiv),
+          psicofarmaco: Boolean(m.psicofarmaco),
+          estupefaciente: Boolean(m.estupefaciente),
+          ventaControlada: Boolean(m.ventaControlada),
+          match_field: String(m.nombreProducto ?? "").toLowerCase().includes(q.toLowerCase())
+            ? "nombre_comercial"
+            : "principio_activo",
+        }));
+      }
+    } catch {
+      // Si RCTA no responde, usamos el vademecum local como respaldo.
+    }
+  }
   const res = await fetch(`${BASE}/medicamentos?q=${encodeURIComponent(q)}&limit=12`);
   const data = await res.json();
   return data.resultados ?? [];
@@ -251,11 +311,18 @@ export interface MedicamentoItem {
   nombre?: string;
   ifa?: string;
   nombre_comercial?: string;
+  regNo?: string;
+  nombreProducto?: string;
+  nombreDroga?: string;
   forma_farmaceutica?: string;
   concentracion?: string;
   presentacion?: string;
   cantidad: number;
   indicaciones: string;
+  permiteSustitucion?: string;
+  tratamiento?: number;
+  posologia?: string;
+  forzarDuplicado?: boolean;
 }
 
 export interface RecetaIn {
@@ -263,6 +330,8 @@ export interface RecetaIn {
   obra_social?: string;
   plan?: string;
   nro_credencial?: string;
+  id_financiador?: number;
+  plan_id?: number;
   diagnostico?: string;
   medicamentos: MedicamentoItem[];
 }
