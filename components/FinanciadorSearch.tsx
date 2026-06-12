@@ -95,17 +95,14 @@ export default function FinanciadorSearch({ value, onChange }: Props) {
       {open && results.length > 0 && (
         <div
           style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            right: 0,
-            zIndex: 2000,
+            marginTop: 6,
+            width: "100%",
             background: "var(--bg-surface)",
             border: "1px solid rgba(10,230,199,0.14)",
             borderRadius: 12,
             overflow: "hidden",
             boxShadow: "0 22px 48px rgba(0,0,0,0.32)",
-            maxHeight: 300,
+            maxHeight: 240,
             overflowY: "auto",
           }}
         >
