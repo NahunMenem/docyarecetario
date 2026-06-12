@@ -215,6 +215,13 @@ export interface DiagnosticoRcta {
   descdiagnostico: string;
 }
 
+export interface FinanciadorRcta {
+  idfinanciador: number;
+  nrofinanciador?: string | null;
+  nombreComercial: string;
+  planes?: Array<{ id: number; nombre: string }>;
+}
+
 export async function buscarDiagnosticosRcta(text: string): Promise<DiagnosticoRcta[]> {
   if (text.trim().length < 3) return [];
   const token = getToken();
@@ -225,6 +232,17 @@ export async function buscarDiagnosticosRcta(text: string): Promise<DiagnosticoR
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || data.mensaje || "Error al buscar diagnósticos");
   return data?.response?.diagnosticos ?? data?.diagnosticos ?? [];
+}
+
+export async function listarFinanciadoresRcta(): Promise<FinanciadorRcta[]> {
+  const token = getToken();
+  if (!token) return [];
+  const res = await fetch(`${BASE}/recetario/rcta/financiadores`, {
+    headers: authHeaders(token),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || data.mensaje || "Error al buscar financiadores");
+  return data?.response?.financiadores ?? data?.financiadores ?? [];
 }
 
 // ── Recetario — Pacientes ─────────────────────────────────────────────────────

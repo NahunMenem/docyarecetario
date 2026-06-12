@@ -7,6 +7,7 @@ import { listarPacientes, emitirReceta, type Paciente, type MedicamentoItem } fr
 import { Medicamento } from "@/lib/api";
 import MedicamentoSearch from "@/components/MedicamentoSearch";
 import DiagnosticoSearch from "@/components/DiagnosticoSearch";
+import FinanciadorSearch from "@/components/FinanciadorSearch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface LineaReceta {
@@ -203,7 +204,7 @@ export default function NuevaRecetaPage() {
   const [pacientes, setPacientes]         = useState<Paciente[]>([]);
   const [loadingPacs, setLoadingPacs]     = useState(true);
   const [pacienteId, setPacienteId]       = useState<number | null>(null);
-  const [extras, setExtras]               = useState({ obra_social: "", plan: "", nro_credencial: "", diagnostico: "" });
+  const [extras, setExtras]               = useState({ obra_social: "", plan: "", nro_credencial: "", diagnostico: "", id_financiador: undefined as number | undefined });
   const [lineas, setLineas]               = useState<LineaReceta[]>([]);
   const [generando, setGenerando]         = useState(false);
   const [emitiendo, setEmitiendo]         = useState(false);
@@ -261,7 +262,7 @@ export default function NuevaRecetaPage() {
         obra_social: extras.obra_social || undefined,
         plan: extras.plan || undefined,
         nro_credencial: extras.nro_credencial || undefined,
-        id_financiador: getRctaFinanciadorId(extras.obra_social),
+        id_financiador: extras.id_financiador || getRctaFinanciadorId(extras.obra_social),
         diagnostico: extras.diagnostico || undefined,
         medicamentos: meds,
       }, token);
@@ -294,7 +295,7 @@ export default function NuevaRecetaPage() {
           <a href={`${success.url_html}?token=${getToken() ?? ""}`} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ textDecoration: "none" }}>
             🖨 Ver / Imprimir receta
           </a>
-          <button className="btn-outline" onClick={() => { setSuccess(null); setLineas([]); setPacienteId(null); setExtras({ obra_social:"",plan:"",nro_credencial:"",diagnostico:"" }); }}>
+          <button className="btn-outline" onClick={() => { setSuccess(null); setLineas([]); setPacienteId(null); setExtras({ obra_social:"",plan:"",nro_credencial:"",diagnostico:"",id_financiador:undefined }); }}>
             + Nueva receta
           </button>
           <Link href="/dashboard/historial" className="btn-outline" style={{ textDecoration: "none" }}>Ver historial</Link>
@@ -334,7 +335,7 @@ export default function NuevaRecetaPage() {
               onChange={(e) => {
                 const p = pacientes.find((x) => x.id === Number(e.target.value));
                 setPacienteId(Number(e.target.value) || null);
-                if (p) setExtras((ex) => ({ ...ex, obra_social: p.obra_social ?? "", plan: p.plan ?? "", nro_credencial: p.nro_credencial ?? "" }));
+                if (p) setExtras((ex) => ({ ...ex, obra_social: p.obra_social ?? "", plan: p.plan ?? "", nro_credencial: p.nro_credencial ?? "", id_financiador: getRctaFinanciadorId(p.obra_social ?? "") }));
               }}
               onFocus={focusOn} onBlur={focusOff}>
               <option value="">— Seleccioná un paciente —</option>
@@ -369,12 +370,25 @@ export default function NuevaRecetaPage() {
               { label:"Plan", key:"plan", placeholder:"210, 410..." },
               { label:"N° Credencial", key:"nro_credencial", placeholder:"15205733603" },
             ].map(({ label, key, placeholder }) => (
-              <div key={key}>
+              <div key={key} style={key === "obra_social" ? { position: "relative", zIndex: 25 } : undefined}>
                 <label style={lbl}>{label}</label>
-                <input style={inp} placeholder={placeholder}
-                  value={extras[key as keyof typeof extras]}
-                  onChange={(e) => setExtras((ex) => ({ ...ex, [key]: e.target.value }))}
-                  onFocus={focusOn} onBlur={focusOff} />
+                {key === "obra_social" ? (
+                  <FinanciadorSearch
+                    value={extras.obra_social}
+                    onChange={(obraSocial, financiador) =>
+                      setExtras((ex) => ({
+                        ...ex,
+                        obra_social: obraSocial,
+                        id_financiador: financiador?.idfinanciador,
+                      }))
+                    }
+                  />
+                ) : (
+                  <input style={inp} placeholder={placeholder}
+                    value={extras[key as "plan" | "nro_credencial"]}
+                    onChange={(e) => setExtras((ex) => ({ ...ex, [key]: e.target.value }))}
+                    onFocus={focusOn} onBlur={focusOff} />
+                )}
               </div>
             ))}
           </div>
